@@ -16,6 +16,7 @@ git clone https://github.com/faizmsyam/codeigniter4-hmvc.git ci4_hmvc_fms
 Then
 ```bash
 cd ci4_hmvc_fms
+```
 
 Copy some require file to root folder (Upgrading to v4.6.1)
 ```bash
@@ -23,7 +24,6 @@ composer update
 cp vendor/codeigniter4/framework/public/index.php public/index.php
 cp vendor/codeigniter4/framework/spark spark
 ```
-``` 
 
 Copy `env` file
 ```bash
@@ -44,7 +44,7 @@ php spark make:module [module]
 ### Example
 Create a home module
 ```bash
-php spark make:module home
+php spark make:module Home
 ```
 
 ###  Result Directory
