@@ -5,7 +5,7 @@
 ### Prerequisites
 1. PHP 8.2 or above
 2. Composer required
-3. CodeIgniter 4.6.1
+3. CodeIgniter 4.6.4
 
 ### Installation Guide
 
@@ -18,7 +18,7 @@ Then
 cd ci4_hmvc_fms
 ```
 
-Copy some require file to root folder (Upgrading to v4.6.1)
+Copy some require file to root folder (Upgrading to v4.6.4)
 ```bash
 composer update
 cp vendor/codeigniter4/framework/public/index.php public/index.php
