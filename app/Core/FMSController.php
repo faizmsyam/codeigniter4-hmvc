@@ -80,6 +80,7 @@ class FMSController extends Controller
   protected string $module = '';
   protected string $location = '';
   protected string $viewBasePath = '';
+  protected string $assetBasePath = '';
 
   public function __construct()
   {
@@ -87,9 +88,11 @@ class FMSController extends Controller
     $this->appName = $app->appName;
     $this->titleTemplate = '%s - ' . $this->appName;
 
+    $this->assetBasePath = 'assets/fms';
+
     $class = static::class;
     if (
-      preg_match('#App\\\Modules\\\(.*?)\\\Controllers\\\(Frontend|Backend|Api)#', $class, $matches)
+      preg_match('#App\\\Modules\\\(.*?)\\\Controllers\\\(Frontend|Backend|Auth|Api)#', $class, $matches)
     ) {
       $this->module = $matches[1];
       $this->location = strtolower($matches[2]);
@@ -97,7 +100,7 @@ class FMSController extends Controller
     }
 
     if (
-      preg_match('#App\\\\Modules\\\\(.*?)\\\\Controllers\\\\(Frontend|Backend|Api)#', $class, $matches)
+      preg_match('#App\\\\Modules\\\\(.*?)\\\\Controllers\\\\(Frontend|Backend|Auth|Api)#', $class, $matches)
     ) {
       $this->module = $matches[1];
       $this->location = strtolower($matches[2]);
@@ -140,16 +143,26 @@ class FMSController extends Controller
 
   protected array $fmsLinks = [];
   protected array $fmsScripts = [];
+  protected array $fmsBottomScripts = [];
 
   protected function fmsLink(string $href, string $rel = 'stylesheet', string $type = 'text/css'): void
   {
-    $this->fmsLinks[] = "<link rel=\"{$rel}\" type=\"{$type}\" href=\"{$href}\">";
+    $hrefLink = $href ? base_url($href) : '';
+    $this->fmsLinks[] = "<link rel=\"{$rel}\" type=\"{$type}\" href=\"{$hrefLink}\">";
   }
 
   protected function fmsScript(string $src, string $type = 'text/javascript', bool $defer = false): void
   {
+    $srcLink = $src ? base_url($src) : '';
     $deferAttr = $defer ? ' defer' : '';
-    $this->fmsScripts[] = "<script type=\"{$type}\" src=\"{$src}\"{$deferAttr}></script>";
+    $this->fmsScripts[] = "<script type=\"{$type}\" src=\"{$srcLink}\"{$deferAttr}></script>";
+  }
+  
+  protected function fmsBottomScript(string $src, string $type = 'text/javascript', bool $defer = false): void
+  {
+    $srcLink = $src ? base_url($src) : '';
+    $deferAttr = $defer ? ' defer' : '';
+    $this->fmsBottomScripts[] = "<script type=\"{$type}\" src=\"{$srcLink}\"{$deferAttr}></script>";
   }
 
   protected function getFmsLinks(): string
@@ -162,14 +175,22 @@ class FMSController extends Controller
     return implode($this->fmsScripts);
   }
   
+  protected function getFmsBottomScripts(): string
+  {
+    return implode($this->fmsBottomScripts);
+  }
+  
   protected function fmsLayout(string $view, array $data = []): string
   {
     if (empty($this->meta)) {
       $this->fmsMeta();
     }
 
+    if ($this->location === 'auth') $this->fmsInitializeAuth();
+    if ($this->location === 'backend') $this->fmsInitializeBackend();
+
     $checkPath = APPPATH . "Modules/{$this->module}/Views/{$this->location}/{$view}.php";
-    if (is_file($checkPath)) {
+    if (is_file($checkPath) && !empty($this->location)) {
       $viewPath = "{$this->location}/index";
       $viewContentPath = "App\\Modules\\{$this->module}\\Views\\{$this->location}\\{$view}";
     } else {
@@ -187,6 +208,7 @@ class FMSController extends Controller
 
     if (!empty($this->fmsLinks)) $data['fmsLinks'] = $this->getFmsLinks();
     if (!empty($this->fmsScripts)) $data['fmsScripts'] = $this->getFmsScripts();
+    if (!empty($this->fmsBottomScripts)) $data['fmsBottomScripts'] = $this->getFmsBottomScripts();
 
     return view($viewPath, $data);
   }
@@ -209,5 +231,46 @@ class FMSController extends Controller
     ob_start();
     include $file;
     return ob_get_clean();
+  }
+
+  function fmsInitializeAuth()
+  {
+    $this->fmsLink($this->assetBasePath.'/libs/bootstrap/css/bootstrap.min.css');
+    $this->fmsLink($this->assetBasePath.'/css/styles.css');
+    $this->fmsLink($this->assetBasePath.'/css/auth/styles.css');
+    $this->fmsLink($this->assetBasePath.'/css/icons.css');
+
+    $this->fmsScript($this->assetBasePath.'/libs/bootstrap/js/bootstrap.bundle.min.js');
+    $this->fmsScript($this->assetBasePath.'/js/authentication-main.js');
+    $this->fmsScript($this->assetBasePath.'/js/show-password.js');
+  }
+
+  function fmsInitializeBackend()
+  {
+    $this->fmsLink($this->assetBasePath.'/libs/bootstrap/css/bootstrap.min.css');
+    $this->fmsLink($this->assetBasePath.'/css/styles.css');
+    $this->fmsLink($this->assetBasePath.'/css/icons.css');
+    $this->fmsLink($this->assetBasePath.'/libs/node-waves/waves.min.css');
+    $this->fmsLink($this->assetBasePath.'/libs/simplebar/simplebar.min.css');
+    $this->fmsLink($this->assetBasePath.'/libs/flatpickr/flatpickr.min.css');
+    $this->fmsLink($this->assetBasePath.'/libs/@simonwep/pickr/themes/nano.min.css');
+    $this->fmsLink($this->assetBasePath.'/libs/choices.js/public/assets/styles/choices.min.css');
+    $this->fmsLink($this->assetBasePath.'/libs/@tarekraafat/autocomplete.js/css/autoComplete.css');
+    $this->fmsLink($this->assetBasePath.'/css/backend/styles.css');
+
+    $this->fmsScript($this->assetBasePath.'/libs/choices.js/public/assets/scripts/choices.min.js');
+    $this->fmsScript($this->assetBasePath.'/js/main.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/@popperjs/core/umd/popper.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/bootstrap/js/bootstrap.bundle.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/defaultmenu.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/node-waves/waves.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/sticky.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/simplebar/simplebar.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/simplebar.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/@tarekraafat/autocomplete.js/autoComplete.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/@simonwep/pickr/pickr.es5.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/libs/flatpickr/flatpickr.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/custom-switcher.min.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/custom.js');
   }
 }

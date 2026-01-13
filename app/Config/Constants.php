@@ -27,6 +27,8 @@ defined('APP_DESCRIPTION') || define('APP_DESCRIPTION', 'Application license by 
 defined('APP_AUTHOR') || define('APP_AUTHOR', 'Faiz Muhammad Syam, S.Kom, M.TI');
 defined('APP_SIGNATURE') || define('APP_SIGNATURE', 'FMS Signature');
 
+defined('ROUTE_ADMIN') || define('ROUTE_ADMIN', 'app');
+
 /*
  | --------------------------------------------------------------------------
  | Composer Path
