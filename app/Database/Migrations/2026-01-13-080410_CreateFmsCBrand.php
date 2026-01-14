@@ -49,11 +49,11 @@ class CreateFmsCBrand extends Migration
 			],
 			'created_at' => [
 				'type' => 'TIMESTAMP',
-				'null' => new RawSql('CURRENT_TIMESTAMP'),
+				'default' => new RawSql('CURRENT_TIMESTAMP'),
 			],
 			'updated_at' => [
 				'type' => 'TIMESTAMP',
-				'null' => new RawSql('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
+				'default' => new RawSql('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
 			],
 		]);
 
@@ -61,7 +61,7 @@ class CreateFmsCBrand extends Migration
 		$this->forge->addKey('id', true);
 
 		// Create table
-		$this->forge->createTable('fms_c_brand', true, [
+		$this->forge->createTable('c_brand', true, [
 			'ENGINE'  => 'InnoDB',
 			'CHARSET' => 'utf8mb4',
 			'COLLATE' => 'utf8mb4_general_ci',
@@ -70,6 +70,6 @@ class CreateFmsCBrand extends Migration
 
 	public function down()
 	{
-		$this->forge->dropTable('fms_c_brand', true);
+		$this->forge->dropTable('c_brand', true);
 	}
 }

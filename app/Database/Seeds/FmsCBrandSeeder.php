@@ -11,12 +11,12 @@ class FmsCBrandSeeder extends Seeder
 		$data = [
 			'id'      => 1,
 			'name'    => 'App Starter',
-			'email'   => 'sobatdukcapil@tangerangkota.go.id',
-			'address' => 'Jl. Satria - Sudirman No.1 Kecamatan Tangerang, Kota Tangerang',
+			'email'   => 'faimsyam@gmail.com',
+			'address' => 'Jl. Pembangunan 3 RT. 05/05 Kel. Karang Sari Kec. Neglasari Kota Tangerang',
 			'phone'   => null,
-			'logo'    => null,
-			'logo_light' => null,
-			'favicon' => null,
+			'logo'    => 'assets/fms/img/logo/logo.png',
+			'logo_light' => 'assets/fms/img/logo/logo.png',
+			'favicon' => 'favicon.ico',
 		];
 
 		$this->db->table('fms_c_brand')->insert($data);
