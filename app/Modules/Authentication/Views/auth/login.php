@@ -33,19 +33,19 @@
     <div class="authentication-cover overflow-hidden">
       <div class="authentication-cover-logo">
         <a href="<?php echo site_url() ?>">
-          <img src="<?php echo assets('img/media', 'logo.png') ?>" alt="" class="desktop-dark">
+          <img src="<?php echo fmsAssets('img/media', 'logo.png') ?>" alt="" class="desktop-dark">
         </a>
       </div>
       <div class="authentication-cover-background">
-        <img src="<?php echo assets('img/auth', 'background.png') ?>" alt="">
+        <img src="<?php echo fmsAssets('img/auth', 'background.png') ?>" alt="">
       </div>
       <div class="authentication-cover-content">
         <div class="p-5">
-          <h3 class="fw-semibold lh-base">Welcome to Dashboard</h3>
+          <h3 class="fw-semibold lh-base">Welcome to Admin Panel</h3>
           <p class="mb-0 text-muted fw-medium">Manage your website and content with ease using our powerful admin tools.</p>
         </div>
         <div>
-          <img src="<?php echo assets('img/auth', 'media-in.png') ?>" alt="" class="img-fluid">
+          <img src="<?php echo fmsAssets('img/auth', 'media-in.png') ?>" alt="" class="img-fluid">
         </div>
       </div>
     </div>

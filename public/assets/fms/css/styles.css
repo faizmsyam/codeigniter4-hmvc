@@ -15,8 +15,8 @@
     73,
     205;
   --primary-rgb:
-    152,
-    95,
+    98, 
+    95, 
     253;
   --secondary-rgb:
     255,
@@ -137,6 +137,7 @@
     38,
     38,
     52;
+  --primary-color: rgb(var(--primary-rgb));
   --menu-bg: rgb(var(--body-bg-rgb));
   --menu-border-color: rgba(255, 255, 255, 0.1);
   --menu-prime-color: rgba(255, 255, 255, 0.7);
@@ -20181,7 +20182,8 @@ ul.widgets-transactions-list li:last-child {
     background: var(--menu-bg);
     box-shadow: none;
     transition: none !important;
-    height: calc(100% - 216px) !important;
+    /* height: calc(100% - 216px) !important; */
+    height: calc(100% - 0px) !important;
     inset-block-start: 0;
     inset-inline-end: 0;
     border-inline-end: 0px solid var(--menu-border-color);

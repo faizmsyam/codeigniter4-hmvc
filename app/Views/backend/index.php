@@ -26,7 +26,7 @@
 
   <meta name="<?php echo csrf_token() ?>" content="<?php echo csrf_hash() ?>">
 
-  <link rel="shortcut icon" type="image/png" href="/favicon.ico">
+  <link rel="shortcut icon" type="image/png" href="<?php echo fmsAssets('img/media', 'favicon.ico') ?>">
 
   <?php echo isset($fmsLinks) ? $fmsLinks : '' ?>
 
@@ -39,7 +39,7 @@
   <?php echo view('backend/_partials/switcher') ?>
 
   <div id="loader">
-    <img src="<?php echo assets('img/media', 'loader.svg') ?>" alt="">
+    <img src="<?php echo fmsAssets('img/media', 'loader.svg') ?>" alt="">
   </div>
 
   <div class="page">

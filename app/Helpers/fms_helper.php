@@ -19,14 +19,28 @@ if (!function_exists('minifier')) {
 	}
 }
 
-if (!function_exists('assets')) {
-  function assets(string $dir, string $filename)
+if (!function_exists('fmsAssets')) {
+  function fmsAssets(string $dir, string $filename)
   {
-    $path = FCPATH . 'assets/fms' . '/' . $dir . '/' . $filename;
+    $path = FCPATH . "assets/fms/{$dir}/{$filename}";
     if ($filename && file_exists($path)) {
-      return base_url('assets/fms' . '/' . $dir . '/' . $filename);
+      return base_url("assets/fms/{$dir}/{$filename}");
     }
     return base_url('assets/fms/img/placeholder/transparent.png');
+  }
+}
+
+if (!function_exists('fmsAssetUrl')) {
+  function fmsAssetUrl(string $dir, ?string $filename): ?string
+  {
+    if (!$filename) {
+      return null;
+    }
+    $path = WRITEPATH . "uploads/fms-drives/{$dir}/{$filename}";
+    if (!is_file($path)) {
+      return null;
+    }
+    return base_url("uploads/fms-drives/{$dir}/{$filename}");
   }
 }
 

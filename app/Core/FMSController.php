@@ -8,6 +8,7 @@
 
 namespace App\Core;
 
+use App\Modules\App\Models\BrandModel;
 use Config\App;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RequestInterface;
@@ -255,7 +256,6 @@ class FMSController extends Controller
     $this->fmsLink($this->assetBasePath.'/libs/flatpickr/flatpickr.min.css');
     $this->fmsLink($this->assetBasePath.'/libs/@simonwep/pickr/themes/nano.min.css');
     $this->fmsLink($this->assetBasePath.'/libs/choices.js/public/assets/styles/choices.min.css');
-    $this->fmsLink($this->assetBasePath.'/libs/@tarekraafat/autocomplete.js/css/autoComplete.css');
     $this->fmsLink($this->assetBasePath.'/css/backend/styles.css');
 
     $this->fmsScript($this->assetBasePath.'/libs/choices.js/public/assets/scripts/choices.min.js');
@@ -267,7 +267,6 @@ class FMSController extends Controller
     $this->fmsBottomScript($this->assetBasePath.'/js/sticky.js');
     $this->fmsBottomScript($this->assetBasePath.'/libs/simplebar/simplebar.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/js/simplebar.js');
-    $this->fmsBottomScript($this->assetBasePath.'/libs/@tarekraafat/autocomplete.js/autoComplete.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/libs/@simonwep/pickr/pickr.es5.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/libs/flatpickr/flatpickr.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/js/custom-switcher.min.js');

@@ -26,7 +26,7 @@
 
   <meta name="<?php echo csrf_token() ?>" content="<?php echo csrf_hash() ?>">
 
-  <link rel="shortcut icon" type="image/png" href="/favicon.ico">
+  <link rel="shortcut icon" type="image/png" href="<?php echo fmsAssets('img/media', 'favicon.ico') ?>">
 
   <?php echo isset($fmsLinks) ? $fmsLinks : '' ?>
 
