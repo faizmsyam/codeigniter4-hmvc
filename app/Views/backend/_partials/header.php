@@ -9,13 +9,11 @@
       <!-- Start::header-element -->
       <div class="header-element">
         <div class="horizontal-logo">
-          <a href="index.html" class="header-logo">
-            <img src="../assets/fms/images/brand-logos/desktop-logo.png" alt="logo"
-              class="desktop-logo">
-            <img src="../assets/fms/images/brand-logos/toggle-logo.png" alt="logo" class="toggle-logo">
-            <img src="../assets/fms/images/brand-logos/desktop-dark.png" alt="logo"
-              class="desktop-dark">
-            <img src="../assets/fms/images/brand-logos/toggle-dark.png" alt="logo" class="toggle-dark">
+          <a href="<?php echo site_url() ?>" class="header-logo">
+            <img src="<?php echo esc((string)(($appBrand['logo_url'] ?? '') ?: fmsAssets('img/media', 'logo.png'))) ?>" alt="<?php echo esc((string)($appBrand['name'] ?? 'logo')) ?>" class="desktop-logo">
+            <img src="<?php echo esc((string)(($appBrand['logo_url'] ?? '') ?: fmsAssets('img/media', 'logo.png'))) ?>" alt="<?php echo esc((string)($appBrand['name'] ?? 'logo')) ?>" class="toggle-logo">
+            <img src="<?php echo esc((string)(($appBrand['logo_light_url'] ?? '') ?: fmsAssets('img/media', 'logo.png'))) ?>" alt="<?php echo esc((string)($appBrand['name'] ?? 'logo')) ?>" class="desktop-dark">
+            <img src="<?php echo esc((string)(($appBrand['logo_light_url'] ?? '') ?: fmsAssets('img/media', 'logo.png'))) ?>" alt="<?php echo esc((string)($appBrand['name'] ?? 'logo')) ?>" class="toggle-dark">
           </a>
         </div>
       </div>
@@ -28,12 +26,39 @@
           data-bs-toggle="sidebar" href="javascript:void(0);"><span></span></a>
       </div>
       <!-- End::header-element -->
-       
+
+      <!-- <div id="live-clock"></div> -->
+
+      <div class="header-element header-search header-search-content d-md-block d-none">
+        <!-- Start::header-link -->
+        <input type="text" class="header-search-bar form-control bg-white" id="header-search" placeholder="Search ..." spellcheck="false" autocomplete="off" autocapitalize="off">
+        <a href="javascript:void(0);" class="header-search-icon border-0" id="header-search-icon">
+          <i class="bi bi-search fs-12 mb-1"></i>
+        </a>
+        <div class="header-search-dropdown" id="header-search-results" style="display:none"></div>
+        <!-- End::header-link -->
+      </div>
+
     </div>
     <!-- End::header-content-left -->
 
     <!-- Start::header-content-right -->
     <ul class="header-content-right">
+      <!-- Start::header-element -->
+      <li class="header-element d-md-none d-block">
+        <a href="javascript:void(0);" class="header-link" data-bs-toggle="modal" data-bs-target="#header-responsive-search">
+          <!-- Start::header-link-icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="header-link-icon" viewBox="0 0 256 256">
+            <rect width="256" height="256" fill="none" />
+            <circle cx="112" cy="112" r="80" opacity="0.2" />
+            <circle cx="112" cy="112" r="80" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
+            <line x1="168.57" y1="168.57" x2="224" y2="224" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
+          </svg>
+          <!-- End::header-link-icon -->
+        </a>
+      </li>
+      <!-- End::header-element -->
+
       <!-- Start::header-element -->
       <li class="header-element header-theme-mode">
         <!-- Start::header-link|layout-setting -->
@@ -122,7 +147,18 @@
         <a href="javascript:void(0);" class="header-link dropdown-toggle" id="mainHeaderProfile"
           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
           <div>
-            <img src="../assets/fms/images/faces/12.jpg" alt="img" class="header-link-icon">
+            <?php $headerAvatarUrl = trim((string) ($backendUser['avatar_url'] ?? '')); ?>
+            <?php $headerAvatarFallback = trim((string) ($backendUser['avatar'] ?? '')); ?>
+            <?php $headerAvatarDisplay = $headerAvatarUrl !== '' ? $headerAvatarUrl : (str_starts_with($headerAvatarFallback, 'http') ? $headerAvatarFallback : ''); ?>
+            <?php if ($headerAvatarDisplay !== ''): ?>
+              <img src="<?php echo esc($headerAvatarDisplay) ?>" alt="Profil"
+                   class="header-link-icon avatar-rounded"
+                   style="width:32px;height:32px;object-fit:cover;">
+            <?php else: ?>
+              <span class="avatar avatar-sm avatar-rounded bg-primary text-fixed-white fw-bold d-flex align-items-center justify-content-center">
+                <?php echo esc(strtoupper(substr((string) ($backendUser['full_name'] ?? $backendUser['username'] ?? 'U'), 0, 1))) ?>
+              </span>
+            <?php endif; ?>
           </div>
         </a>
         <!-- End::header-link|dropdown-toggle -->
@@ -139,52 +175,34 @@
           <div class="p-3">
             <div class="d-flex align-items-start gap-2">
               <div class="lh-1">
-                <span class="avatar avatar-sm bg-primary-transparent avatar-rounded">
-                  <img src="../assets/fms/images/faces/12.jpg" alt="">
-                </span>
+                <?php if ($headerAvatarDisplay !== ''): ?>
+                  <span class="avatar avatar-sm bg-primary-transparent avatar-rounded">
+                    <img src="<?php echo esc($headerAvatarDisplay) ?>" alt="">
+                  </span>
+                <?php else: ?>
+                  <span class="avatar avatar-sm bg-primary-transparent avatar-rounded">
+                    <?php echo esc(strtoupper(substr((string) ($backendUser['full_name'] ?? $backendUser['username'] ?? 'U'), 0, 1))) ?>
+                  </span>
+                <?php endif; ?>
               </div>
               <div>
-                <span class="d-block fw-semibold lh-1">Tom Phillip</span>
-                <span class="text-muted fs-12">tomphillip32@gmail.com</span>
+                <span class="d-block fw-semibold lh-1 text-nowrap"><?php echo esc((string) ($backendUser['full_name'] ?? $backendUser['username'] ?? 'User')) ?></span>
+                <span class="text-muted fs-12 text-nowrap"><?php echo esc((string) ($backendUser['email'] ?? '')) ?></span>
               </div>
             </div>
           </div>
           <div class="dropdown-divider"></div>
           <ul class="list-unstyled mb-0">
             <li>
-              <ul class="list-unstyled mb-0 sub-list">
-                <li>
-                  <a class="dropdown-item d-flex align-items-center" href="profile.html"><i
-                      class="ti ti-user-circle me-2 fs-18"></i>View Profile</a>
-                </li>
-                <li>
-                  <a class="dropdown-item d-flex align-items-center"
-                    href="mail-settings.html"><i
-                      class="ti ti-settings-cog me-2 fs-18"></i>Account Settings</a>
-                </li>
-              </ul>
+              <a class="dropdown-item d-flex align-items-center" href="<?php echo site_url(ROUTE_ADMIN . '/profile') ?>">
+                <i class="ti ti-user-circle me-2 fs-18"></i>Profil Saya
+              </a>
             </li>
             <li>
-              <ul class="list-unstyled mb-0 sub-list">
-                <li>
-                  <a class="dropdown-item d-flex align-items-center"
-                    href="javascript:void(0);"><i
-                      class="ti ti-lifebuoy me-2 fs-18"></i>Support</a>
-                </li>
-                <li>
-                  <a class="dropdown-item d-flex align-items-center"
-                    href="javascript:void(0);"><i class="ti ti-bolt me-2 fs-18"></i>Activity
-                    Log</a>
-                </li>
-                <li>
-                  <a class="dropdown-item d-flex align-items-center"
-                    href="javascript:void(0);"><i
-                      class="ti ti-calendar me-2 fs-18"></i>Events</a>
-                </li>
-              </ul>
+              <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);" data-fms-logout="<?php echo esc(site_url('api/v1/auth/logout'), 'attr') ?>" data-fms-login="<?php echo esc(site_url('fms-auth/in'), 'attr') ?>">
+                <i class="ti ti-logout me-2 fs-18"></i>Keluar
+              </a>
             </li>
-            <li><a class="dropdown-item d-flex align-items-center" href="sign-in-cover.html"><i
-                  class="ti ti-logout me-2 fs-18"></i>Log Out</a></li>
           </ul>
         </div>
       </li>
@@ -219,3 +237,28 @@
   <!-- End::main-header-container -->
 
 </header>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const clockEl = document.getElementById("live-clock");
+    if (!clockEl) return;
+
+    const hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
+    const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    function updateClock() {
+      const now = new Date();
+
+      clockEl.innerHTML =
+        `
+       ${hari[now.getDay()]}, ${now.getDate()} ${bulan[now.getMonth()]} ${now.getFullYear()}
+       ${String(now.getHours()).padStart(2,"0")} :
+       ${String(now.getMinutes()).padStart(2,"0")} :
+       ${String(now.getSeconds()).padStart(2,"0")} WIB
+      `;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  });
+</script>

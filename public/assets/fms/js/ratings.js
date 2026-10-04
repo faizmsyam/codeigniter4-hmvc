@@ -137,7 +137,7 @@
   document.getElementById("switcher-ltr").addEventListener("click", ratingLTR);
   document.getElementById("reset-all").addEventListener("click", ratingLTR);
 
-  if (localStorage.getItem("vyzorrtl")) {
+  if (localStorage.getItem("fmsrtl")) {
     setTimeout(() => {
       ratingRTL();
     }, 100);

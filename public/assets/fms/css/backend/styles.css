@@ -1,0 +1,46 @@
+#live-clock {
+  display: flex;
+  align-items: center;
+  color: var(--header-icon-color);
+}
+
+/* Keep the footer at the viewport bottom on short pages without taking it
+   out of normal document flow. Sidebar spacing remains owned by the theme. */
+.page {
+  justify-content: flex-start;
+}
+
+.main-content.app-content {
+  flex: 1 0 auto;
+}
+
+.footer {
+  flex-shrink: 0;
+  width: 100%;
+  margin-top: auto;
+}
+
+/* Force Boxicons/FontAwesome icons in the sidebar to match SVG sizing */
+[data-vertical-style=doublemenu][data-nav-layout=vertical] .app-sidebar .main-menu > .slide > .side-menu__item .fms-menu-font-icon  {
+  font-size: 22px;
+}
+
+.app-sidebar .side-menu__icon.fms-menu-font-icon,
+.side-menu__item .fms-menu-font-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1.125rem;
+  font-size: 18px;
+  text-align: center;
+  line-height: 1;
+  /* width: 1.125rem;
+  height: 1.125rem; */
+  /* margin-inline-end: 0.625rem; */
+}
+
+@media (max-width: 768px) {
+  #live-clock {
+    display: none;
+  }
+}

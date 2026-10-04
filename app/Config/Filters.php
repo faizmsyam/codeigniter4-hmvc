@@ -12,6 +12,12 @@ use CodeIgniter\Filters\InvalidChars;
 use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
+use App\Filters\FMSApiSecurityBaselineFilter;
+use App\Filters\FMSApiAuthenticationFilter;
+use App\Filters\FMSBackendAuthenticationFilter;
+use App\Filters\FMSApiKeyAuthenticationFilter;
+use App\Filters\FMSBasicAuthenticationFilter;
+use App\Filters\FMSJwtAuthenticationFilter;
 
 class Filters extends BaseFilters
 {
@@ -34,6 +40,12 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'fms-api-security'          => FMSApiSecurityBaselineFilter::class,
+        'fms-api-authentication'    => FMSApiAuthenticationFilter::class,
+        'fms-backend-authentication' => FMSBackendAuthenticationFilter::class,
+        'fms-jwt-authentication'   => FMSJwtAuthenticationFilter::class,
+        'fms-api-key-authentication' => FMSApiKeyAuthenticationFilter::class,
+        'fms-basic-authentication' => FMSBasicAuthenticationFilter::class,
     ];
 
     /**
@@ -55,9 +67,9 @@ class Filters extends BaseFilters
             'pagecache',  // Web Page Caching
         ],
         'after' => [
-            'pagecache',   // Web Page Caching
-            'performance', // Performance Metrics
-            'toolbar',     // Debug Toolbar
+            'pagecache', // Web Page Caching
+            // 'performance', // Performance Metrics
+            // 'toolbar',     // Debug Toolbar
         ],
     ];
 
@@ -70,7 +82,7 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            'csrf' => ['except' => ['api/*']],
+            'csrf' => ['except' => ['api/*', 'brand/*']],
             // 'invalidchars',
         ],
         'after' => [
@@ -103,5 +115,10 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+        'fms-api-security' => [
+            'before' => ['api/*'],
+            'after' => ['api/*'],
+        ],
+    ];
 }

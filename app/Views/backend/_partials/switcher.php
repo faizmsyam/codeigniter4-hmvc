@@ -464,35 +464,35 @@
                 <input class="form-check-input bgimage-input bg-img1" type="radio"
                   name="menu-background" id="switcher-bg-img">
                 <div class="bg-img-container">
-                  <img src="../assets/fms/images/menu-bg-images/bg-img1.jpg" alt="">
+                  <img src="<?php echo fmsAssets('img/background/sidebar', 'bg-img1.webp') ?>" alt="">
                 </div>
               </div>
               <div class="form-check switch-select menu-img-select m-2">
                 <input class="form-check-input bgimage-input bg-img2" type="radio"
                   name="menu-background" id="switcher-bg-img1">
                 <div class="bg-img-container">
-                  <img src="../assets/fms/images/menu-bg-images/bg-img2.jpg" alt="">
+                  <img src="<?php echo fmsAssets('img/background/sidebar', 'bg-img2.webp') ?>" alt="">
                 </div>
               </div>
               <div class="form-check switch-select menu-img-select m-2">
                 <input class="form-check-input bgimage-input bg-img3" type="radio"
                   name="menu-background" id="switcher-bg-img2">
                 <div class="bg-img-container">
-                  <img src="../assets/fms/images/menu-bg-images/bg-img3.jpg" alt="">
+                  <img src="<?php echo fmsAssets('img/background/sidebar', 'bg-img3.webp') ?>" alt="">
                 </div>
               </div>
               <div class="form-check switch-select menu-img-select m-2">
                 <input class="form-check-input bgimage-input bg-img4" type="radio"
                   name="menu-background" id="switcher-bg-img3">
                 <div class="bg-img-container">
-                  <img src="../assets/fms/images/menu-bg-images/bg-img4.jpg" alt="">
+                  <img src="<?php echo fmsAssets('img/background/sidebar', 'bg-img4.webp') ?>" alt="">
                 </div>
               </div>
               <div class="form-check switch-select menu-img-select m-2">
                 <input class="form-check-input bgimage-input bg-img5" type="radio"
                   name="menu-background" id="switcher-bg-img4">
                 <div class="bg-img-container">
-                  <img src="../assets/fms/images/menu-bg-images/bg-img5.jpg" alt="">
+                  <img src="<?php echo fmsAssets('img/background/sidebar', 'bg-img5.webp') ?>" alt="">
                 </div>
               </div>
             </div>

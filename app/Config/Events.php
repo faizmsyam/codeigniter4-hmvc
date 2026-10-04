@@ -3,6 +3,7 @@
 namespace Config;
 
 use CodeIgniter\Events\Events;
+use CodeIgniter\Exceptions\ConfigException;
 use CodeIgniter\Exceptions\FrameworkException;
 use CodeIgniter\HotReloader\HotReloader;
 
@@ -24,6 +25,13 @@ use CodeIgniter\HotReloader\HotReloader;
  */
 
 Events::on('pre_system', static function (): void {
+    if (ENVIRONMENT === 'production' || getenv('CI_ENVIRONMENT') === 'production') {
+        $startupVerification = (new \App\Libraries\FMSStartupGuard())->verify('production', time());
+        if ($startupVerification['allowed'] === false) {
+            throw new ConfigException('Startup environment cannot be verified.');
+        }
+    }
+
     if (ENVIRONMENT !== 'testing') {
         if (ini_get('zlib.output_compression')) {
             throw FrameworkException::forEnabledZlibOutputCompression();

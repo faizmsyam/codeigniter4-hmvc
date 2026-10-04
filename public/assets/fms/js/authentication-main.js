@@ -3,16 +3,16 @@
     const html = document.querySelector('html');
     if(html) {
 
-        if (localStorage.getItem("vyzordarktheme")) {
+        if (localStorage.getItem("fmsdarktheme")) {
             html.setAttribute("data-theme-mode", "dark")
             html.setAttribute("data-menu-styles", "dark")
             html.setAttribute("data-header-styles", "dark")
         }
-        if (localStorage.vyzorrtl) {
+        if (localStorage.fmsrtl) {
             html.setAttribute("dir", "rtl");
             document.querySelector("#style")?.setAttribute("href", "../assets/libs/bootstrap/css/bootstrap.rtl.min.css");
         }
-        if (localStorage.getItem("vyzorlayout") == "horizontal") {
+        if (localStorage.getItem("fmslayout") == "horizontal") {
             html.setAttribute("data-nav-layout", "horizontal") 
         }
         function localStorageBackup() {
@@ -40,10 +40,10 @@
     
     
             }
-            if (localStorage.vyzordarktheme) {
+            if (localStorage.fmsdarktheme) {
                 html.setAttribute('data-theme-mode', 'dark');
             }
-            if (localStorage.vyzorrtl) {
+            if (localStorage.fmsrtl) {
                 html.setAttribute('dir', 'rtl');
                 document.querySelector("#style")?.setAttribute("href", "../assets/libs/bootstrap/css/bootstrap.rtl.min.css");
                 setTimeout(() => {

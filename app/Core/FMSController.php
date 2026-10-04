@@ -8,8 +8,8 @@
 
 namespace App\Core;
 
-use App\Modules\App\Models\BrandModel;
 use Config\App;
+use App\Modules\Brand\Services\FMSBrandIdentityService;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -17,7 +17,7 @@ use Psr\Log\LoggerInterface;
 
 class FMSController extends Controller
 {
-  public $helpers = ['fms'];
+  public $helpers = ['fms', 'fms_menu'];
 
   /**
    * Request instance.
@@ -82,11 +82,14 @@ class FMSController extends Controller
   protected string $location = '';
   protected string $viewBasePath = '';
   protected string $assetBasePath = '';
+  /** @var array<string, mixed> */
+  protected array $appBrand = [];
 
   public function __construct()
   {
     $app = config(App::class);
-    $this->appName = $app->appName;
+    $this->appBrand = (new FMSBrandIdentityService())->get();
+    $this->appName = trim((string) ($this->appBrand['name'] ?? '')) ?: $app->appName;
     $this->titleTemplate = '%s - ' . $this->appName;
 
     $this->assetBasePath = 'assets/fms';
@@ -109,7 +112,6 @@ class FMSController extends Controller
     } elseif (
       preg_match('#App\\\\Modules\\\\(.*?)\\\\Controllers#', $class, $matches)
     ) {
-
       $this->module = $matches[1];
       $this->location = '';
       $this->viewBasePath = APPPATH . "Modules/{$this->module}/Views/";
@@ -125,9 +127,9 @@ class FMSController extends Controller
   protected function fmsMeta(array $metaParam = []): void
   {
     $this->meta['title'] = isset($metaParam['title']) && !empty($metaParam['title']) ? sprintf($this->titleTemplate, $metaParam['title']) : $this->appName;
-    $this->meta['description'] = isset($metaParam['description']) && !empty($metaParam['description']) ? $metaParam['description'] : APP_DESCRIPTION;
+    $this->meta['description'] = isset($metaParam['description']) && !empty($metaParam['description']) ? $metaParam['description'] : ((string) ($this->appBrand['description'] ?? '') ?: APP_DESCRIPTION);
     $this->meta['keywords'] = isset($metaParam['keywords']) && !empty($metaParam['keywords']) ? $metaParam['keywords'] : '';
-    $this->meta['image'] = isset($metaParam['image']) && !empty($metaParam['image']) ? $metaParam['image'] : base_url('favicon.ico');
+    $this->meta['image'] = isset($metaParam['image']) && !empty($metaParam['image']) ? $metaParam['image'] : (string) ($this->appBrand['logo_url'] ?? base_url('favicon.ico'));
     $this->meta['url'] = isset($metaParam['url']) && !empty($metaParam['url']) ? $metaParam['url'] : current_url();
     $this->meta['author'] = APP_AUTHOR;
     $this->meta['signature'] = APP_SIGNATURE;
@@ -154,6 +156,7 @@ class FMSController extends Controller
 
   protected function fmsScript(string $src, string $type = 'text/javascript', bool $defer = false): void
   {
+    $src = $this->fmsVersionedAsset($src);
     $srcLink = $src ? base_url($src) : '';
     $deferAttr = $defer ? ' defer' : '';
     $this->fmsScripts[] = "<script type=\"{$type}\" src=\"{$srcLink}\"{$deferAttr}></script>";
@@ -161,9 +164,22 @@ class FMSController extends Controller
   
   protected function fmsBottomScript(string $src, string $type = 'text/javascript', bool $defer = false): void
   {
+    $src = $this->fmsVersionedAsset($src);
     $srcLink = $src ? base_url($src) : '';
     $deferAttr = $defer ? ' defer' : '';
     $this->fmsBottomScripts[] = "<script type=\"{$type}\" src=\"{$srcLink}\"{$deferAttr}></script>";
+  }
+
+  private function fmsVersionedAsset(string $src): string
+  {
+    if ($src === '' || str_contains($src, '?') || preg_match('#^https?://#i', $src) === 1) {
+      return $src;
+    }
+
+    $publicRelativePath = ltrim($src, '/');
+    $absolutePath = PUBLICPATH . str_replace('/', DIRECTORY_SEPARATOR, $publicRelativePath);
+
+    return is_file($absolutePath) ? $src . '?v=' . filemtime($absolutePath) : $src;
   }
 
   protected function getFmsLinks(): string
@@ -204,6 +220,7 @@ class FMSController extends Controller
       }
     }
     
+    $data['appBrand'] = $this->appBrand;
     $data['meta'] = $this->getMeta();
     $data['content'] = view($viewContentPath, $data);
 
@@ -234,6 +251,12 @@ class FMSController extends Controller
     return ob_get_clean();
   }
 
+  function fmsSharedCoreScript(): void
+  {
+    /* Blok splash brand dipakai seluruh alur AJAX, termasuk halaman auth */
+    $this->fmsBottomScript($this->assetBasePath.'/js/fms.js');
+  }
+
   function fmsInitializeAuth()
   {
     $this->fmsLink($this->assetBasePath.'/libs/bootstrap/css/bootstrap.min.css');
@@ -244,6 +267,7 @@ class FMSController extends Controller
     $this->fmsScript($this->assetBasePath.'/libs/bootstrap/js/bootstrap.bundle.min.js');
     $this->fmsScript($this->assetBasePath.'/js/authentication-main.js');
     $this->fmsScript($this->assetBasePath.'/js/show-password.js');
+    $this->fmsSharedCoreScript();
   }
 
   function fmsInitializeBackend()
@@ -251,6 +275,7 @@ class FMSController extends Controller
     $this->fmsLink($this->assetBasePath.'/libs/bootstrap/css/bootstrap.min.css');
     $this->fmsLink($this->assetBasePath.'/css/styles.css');
     $this->fmsLink($this->assetBasePath.'/css/icons.css');
+    $this->fmsLink($this->assetBasePath.'/css/phosphor-duotone.css');
     $this->fmsLink($this->assetBasePath.'/libs/node-waves/waves.min.css');
     $this->fmsLink($this->assetBasePath.'/libs/simplebar/simplebar.min.css');
     $this->fmsLink($this->assetBasePath.'/libs/flatpickr/flatpickr.min.css');
@@ -269,6 +294,8 @@ class FMSController extends Controller
     $this->fmsBottomScript($this->assetBasePath.'/js/simplebar.js');
     $this->fmsBottomScript($this->assetBasePath.'/libs/@simonwep/pickr/pickr.es5.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/libs/flatpickr/flatpickr.min.js');
+    $this->fmsSharedCoreScript();
+    $this->fmsBottomScript($this->assetBasePath.'/js/fms-header-search.js');
     $this->fmsBottomScript($this->assetBasePath.'/js/custom-switcher.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/js/custom.js');
   }

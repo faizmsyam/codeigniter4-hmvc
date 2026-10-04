@@ -124,3 +124,10 @@ _modules/*
 
 /results/
 /phpunit*.xml
+
+# Templates Admin
+/templates-admin/
+
+# Generated cryptographic keys — never commit private key material
+/writable/keys/*
+!/writable/keys/.gitkeep

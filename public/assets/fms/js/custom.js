@@ -282,6 +282,7 @@
     let html = document.querySelector("html");
     if (html.getAttribute("data-theme-mode") === "dark") {
       html.setAttribute("data-theme-mode", "light");
+      if (window.FMSTheme) window.FMSTheme.setPreference('light');
       html.setAttribute("data-header-styles", "transparent");
       html.setAttribute("data-menu-styles", "transparent");
       if (!localStorage.getItem("primaryRGB")) {
@@ -306,14 +307,15 @@
       document.querySelector("#switcher-background2").checked = false;
       document.querySelector("#switcher-background1").checked = false;
       document.querySelector("#switcher-background").checked = false;
-      localStorage.removeItem("vyzordarktheme");
-      localStorage.removeItem("vyzorMenu");
-      localStorage.removeItem("vyzorHeader");
+      localStorage.removeItem("fmsdarktheme");
+      localStorage.removeItem("fmsMenu");
+      localStorage.removeItem("fmsHeader");
       localStorage.removeItem("bodylightRGB");
       localStorage.removeItem("bodyBgRGB");
       html.setAttribute("data-header-styles", "transparent");
     } else {
       html.setAttribute("data-theme-mode", "dark");
+      if (window.FMSTheme) window.FMSTheme.setPreference('dark');
       html.setAttribute("data-header-styles", "transparent");
       if (!localStorage.getItem("primaryRGB")) {
         html.setAttribute("style", "");
@@ -331,9 +333,9 @@
       document.querySelector("#switcher-background2").checked = false;
       document.querySelector("#switcher-background1").checked = false;
       document.querySelector("#switcher-background").checked = false;
-      localStorage.setItem("vyzordarktheme", "true");
-      localStorage.setItem("vyzorMenu", "transparent");
-      localStorage.setItem("vyzorHeader", "transparent");
+      localStorage.setItem("fmsdarktheme", "true");
+      localStorage.setItem("fmsMenu", "transparent");
+      localStorage.setItem("fmsHeader", "transparent");
       localStorage.removeItem("bodylightRGB");
       localStorage.removeItem("bodyBgRGB");
     }
@@ -349,6 +351,7 @@
       let html = document.querySelector("html");
       if (html.getAttribute("data-theme-mode") === "dark") {
         html.setAttribute("data-theme-mode", "light");
+      if (window.FMSTheme) window.FMSTheme.setPreference('light');
         html.setAttribute("data-header-styles", "transparent");
         html.setAttribute("data-menu-styles", "transparent");
         if (!localStorage.getItem("primaryRGB")) {
@@ -373,14 +376,15 @@
         document.querySelector("#switcher-background2").checked = false;
         document.querySelector("#switcher-background1").checked = false;
         document.querySelector("#switcher-background").checked = false;
-        localStorage.removeItem("vyzordarktheme");
-        localStorage.removeItem("vyzorMenu");
-        localStorage.removeItem("vyzorHeader");
+        localStorage.removeItem("fmsdarktheme");
+        localStorage.removeItem("fmsMenu");
+        localStorage.removeItem("fmsHeader");
         localStorage.removeItem("bodylightRGB");
         localStorage.removeItem("bodyBgRGB");
         html.setAttribute("data-header-styles", "transparent");
       } else {
         html.setAttribute("data-theme-mode", "dark");
+      if (window.FMSTheme) window.FMSTheme.setPreference('dark');
         html.setAttribute("data-header-styles", "transparent");
         if (!localStorage.getItem("primaryRGB")) {
           html.setAttribute("style", "");
@@ -398,9 +402,9 @@
         document.querySelector("#switcher-background2").checked = false;
         document.querySelector("#switcher-background1").checked = false;
         document.querySelector("#switcher-background").checked = false;
-        localStorage.setItem("vyzordarktheme", "true");
-        localStorage.setItem("vyzorMenu", "transparent");
-        localStorage.setItem("vyzorHeader", "transparent");
+        localStorage.setItem("fmsdarktheme", "true");
+        localStorage.setItem("fmsMenu", "transparent");
+        localStorage.setItem("fmsHeader", "transparent");
         localStorage.removeItem("bodylightRGB");
         localStorage.removeItem("bodyBgRGB");
       }
