@@ -362,7 +362,51 @@
   els.refreshContent.addEventListener('click', function () { loadContent(false); });
   els.autoRefresh.addEventListener('click', toggleAutoRefresh);
   els.download.addEventListener('click', function () {
-    if (selectedFile) window.location.href = urls.download + '?path=' + encodeURIComponent(selectedFile);
+    if (!selectedFile) return;
+    var token = '';
+    var tokenType = 'Bearer';
+    try {
+      token = sessionStorage.getItem('fms_access_token') || '';
+      tokenType = sessionStorage.getItem('fms_token_type') || 'Bearer';
+    } catch (_) {}
+
+    var url = urls.download + '?path=' + encodeURIComponent(selectedFile);
+    var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    if (token) headers.Authorization = tokenType + ' ' + token;
+    FMS.blockUI();
+
+    window.fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: headers
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (text) {
+          var message = 'Download gagal (HTTP ' + res.status + ').';
+          try {
+            var payload = JSON.parse(text);
+            if (payload && payload.message) message = payload.message;
+          } catch (_) {}
+          throw new Error(message);
+        });
+      }
+      return res.blob();
+    }).then(function (blob) {
+      var objectUrl = URL.createObjectURL(blob);
+      var anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = selectedFile.split('/').pop();
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
+      FMS.toast('Download dimulai.', true);
+    }).catch(function (error) {
+      FMS.toast(error.message || 'Download gagal.', false);
+    }).finally(function () {
+      FMS.unblockUI();
+    });
   });
   els.search.addEventListener('input', function () {
     clearTimeout(searchTimer);
