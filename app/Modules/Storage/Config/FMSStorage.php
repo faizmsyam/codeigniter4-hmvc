@@ -41,14 +41,11 @@ final class FMSStorage extends BaseConfig
 
     /**
      * Single source of truth untuk allowed MIME types.
-     * Dibaca langsung dari FMSUploads (yang bisa override lewat .env
-     * fmsuploads.allowedFileTypes.*), sehingga tidak ada duplikasi daftar.
+     * Pilihan aktif dibaca dari fmsuploads.allowedMimeTypes di .env;
+     * definisi tipe dan validasi tetap berasal dari FMSUploads.
      */
     public function allowedMimeTypes(): array
     {
-        return array_values(array_unique(array_column(
-            config(FMSUploads::class)->allowedFileTypes ?? [],
-            'mime'
-        )));
+        return config(FMSUploads::class)->allowedMimes();
     }
 }

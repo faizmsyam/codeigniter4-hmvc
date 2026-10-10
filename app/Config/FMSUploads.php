@@ -148,7 +148,19 @@ final class FMSUploads extends BaseConfig
     /** @return list<string> MIME yang diizinkan dari whitelist */
     public function allowedMimes(): array
     {
-        return array_values(array_unique(array_column($this->allowedFileTypes, 'mime')));
+        $configured = trim((string) env('fmsuploads.allowedMimeTypes', ''));
+        $available = array_values(array_unique(array_column($this->allowedFileTypes, 'mime')));
+
+        if ($configured === '') {
+            return $available;
+        }
+
+        $requested = array_values(array_unique(array_filter(array_map(
+            static fn (string $mime): string => strtolower(trim($mime)),
+            explode(',', $configured),
+        ))));
+
+        return array_values(array_intersect($requested, $available));
     }
 
     /** @return int ukuran maksimum global (maks dari semua tipe) */

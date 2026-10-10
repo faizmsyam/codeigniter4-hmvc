@@ -81,16 +81,6 @@ CI_ENVIRONMENT = development
 # FMSApiSecurity.csrfHeaderName = FMS-CSRF-TOKEN
 # FMSApiSecurity.csrfCookieName = fms_csrf
 
-# FMS STORAGE MODULE
-# Pilih MIME yang boleh di-upload, dipisahkan koma.
-# Kosongkan atau hapus baris ini untuk memakai default: image/webp,application/pdf.
-# FMS_STORAGE_ALLOWED_MIME_TYPES = image/webp,application/pdf,image/png
-# Batas upload per object dalam byte.
-# FMSStorage.maximumUploadBytes = 104857600
-# Root bucket private, wajib di luar public/.
-# FMSStorage.storageRoot = /path/to/project/writable/uploads/fms-buckets
-# FMSStorage.bucketName = fms-private
-
 #--------------------------------------------------------------------
 # FMS UPLOAD / PRIVATE OBJECT STORAGE
 #--------------------------------------------------------------------
@@ -98,10 +88,12 @@ CI_ENVIRONMENT = development
 # fmsuploads.storageDriver = local
 
 # Local bucket root must be an absolute path outside public/.
-# fmsuploads.storageRoot = /path/to/project/writable/uploads/fms-buckets
+# fmsuploads.storageRoot = /absolute/path/to/writable/uploads/fms-buckets
 # fmsuploads.bucketName = fms-private
 # fmsuploads.objectKeyPrefix = fms-uploads
 # fmsuploads.createBucketAutomatically = true
+# Allowed MIME types, comma-separated. Empty = all FMSUploads.allowedFileTypes.
+# fmsuploads.allowedMimeTypes = image/webp,application/pdf
 
 # HMAC signing key for local presigned downloads. Minimum 32 bytes.
 # Generate: php -r "echo bin2hex(random_bytes(32));"

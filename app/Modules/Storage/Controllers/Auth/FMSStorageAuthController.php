@@ -4,6 +4,7 @@ namespace App\Modules\Storage\Controllers\Auth;
 use App\Core\FMSController;
 use App\Modules\Storage\Models\FMSStorageUserModel;
 use App\Modules\Storage\Services\FMSStorageObjectService;
+use App\Modules\Storage\Services\FMSStorageSessionService;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
@@ -11,7 +12,8 @@ final class FMSStorageAuthController extends FMSController
 {
     public function login(): string|ResponseInterface
     {
-        if (session()->get('fms_storage_authenticated') === true) {
+        $token = (string) $this->request->getCookie(FMSStorageSessionService::COOKIE_NAME);
+        if ((new FMSStorageSessionService())->resolve($token) !== null) {
             return redirect()->to(site_url('fms-storage'));
         }
 
@@ -29,37 +31,33 @@ final class FMSStorageAuthController extends FMSController
             return redirect()->back()->withInput()->with('storage_error', 'Username atau password salah.');
         }
 
-        session()->regenerate(true);
-        session()->set([
-            'fms_storage_authenticated' => true,
-            'fms_storage_user_id' => (int) $user['id'],
-            'fms_storage_username' => (string) $user['username'],
-            'fms_storage_full_name' => (string) ($user['full_name'] ?? $user['username']),
-            'fms_storage_super_admin' => (int) ($user['is_super_admin'] ?? 0) === 1,
-            'fms_storage_logged_in_at' => time(),
-        ]);
-
         $model->update((int) $user['id'], [
             'last_login_at' => date('Y-m-d H:i:s'),
             'last_login_ip_hash' => hash('sha256', (string) $this->request->getIPAddress()),
         ]);
 
-        $intended = (string) session()->get('fms_storage_intended_url');
-        session()->remove('fms_storage_intended_url');
+        $sessionService = new FMSStorageSessionService();
+        $token = $sessionService->create(
+            (int) $user['id'],
+            (string) $this->request->getIPAddress(),
+            (string) $this->request->getUserAgent()->getAgentString(),
+        );
 
-        return redirect()->to($intended !== '' ? $intended : site_url('fms-storage'));
+        $next = (string) $this->request->getGet('next');
+        $intended = filter_var($next, FILTER_SANITIZE_URL) ?: site_url('fms-storage');        
+        return $sessionService->attachCookie(
+            redirect()->to($intended)->with('storage_success', 'Selamat datang, ' . esc($user['full_name'] ?? $user['username'])),
+            $token
+        );
     }
 
     public function logout(): ResponseInterface
     {
-        foreach (array_keys(session()->get()) as $key) {
-            if (str_starts_with((string) $key, 'fms_storage_')) {
-                session()->remove($key);
-            }
-        }
-
-        session()->regenerate(true);
-        return redirect()->to(site_url('fms-storage/login'))->with('storage_success', 'Anda telah keluar.');
+        $sessionService = new FMSStorageSessionService();
+        $sessionService->revoke((string) $this->request->getCookie(FMSStorageSessionService::COOKIE_NAME));
+        return $sessionService->clearCookie(
+            redirect()->to(site_url('fms-storage/login'))->with('storage_success', 'Anda telah keluar.')
+        );
     }
 
     public function share(string $token): ResponseInterface
