@@ -188,8 +188,9 @@
 (function () {
   'use strict';
 
-  const app = document.getElementById('logMonitorApp');
-  if (!app || !window.FMS) return;
+  function initLogMonitor() {
+    const app = document.getElementById('logMonitorApp');
+    if (!app || !window.FMS) return;
 
   const urls = {
     files: app.dataset.filesUrl,
@@ -389,5 +390,12 @@
   });
 
   loadFiles();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLogMonitor);
+  } else {
+    initLogMonitor();
+  }
 }());
 </script>
