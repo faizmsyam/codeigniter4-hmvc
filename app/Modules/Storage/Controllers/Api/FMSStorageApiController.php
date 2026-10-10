@@ -148,20 +148,41 @@ final class FMSStorageApiController extends FMSController
         ]]);
     }
 
-    public function changePassword(): ResponseInterface
+    public function metadata(): ResponseInterface
     {
-        $user = $this->user();
-        if (! $user) return $this->json(['status' => false], 401);
-        $data = $this->request->getJSON(true) ?: $this->request->getPost();
-        if (! password_verify((string) ($data['current_password'] ?? ''), (string) $user['password_hash'])) {
-            return $this->json(['status' => false, 'message' => 'Password saat ini salah.'], 422);
+        if (! $this->allowed(FMSStorageAuthorizationService::READ)) return $this->deny();
+        $key = trim((string) $this->request->getGet('key'));
+        if ($key === '') return $this->json(['status' => false, 'message' => 'Key wajib diisi.'], 422);
+        try {
+            $data = (new FMSStorageObjectService())->readLocal($key);
+            return $this->json(['status' => true, 'data' => [
+                'key' => $key,
+                'mime' => $data['content_type'],
+                'size' => $data['byte_size'],
+                'sha256' => $data['sha256'],
+                'etag' => '"' . substr($data['sha256'], 0, 16) . '"',
+                'updated_at' => date('Y-m-d H:i:s'),
+                'download_url' => site_url('api/v1/storage/download?key=' . urlencode($key)),
+            ]]);
+        } catch (Throwable $e) {
+            return $this->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
-        $password = (string) ($data['new_password'] ?? '');
-        if (strlen($password) < 12) return $this->json(['status' => false, 'message' => 'Password minimal 12 karakter.'], 422);
-        (new FMSStorageUserModel())->update((int) $user['id'], [
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-            'password_changed_at' => date('Y-m-d H:i:s'),
-        ]);
-        return $this->json(['status' => true]);
     }
-}
+
+    public function download(): ResponseInterface
+    {
+        $key = trim((string) $this->request->getGet('key'));
+        if ($key === '') return $this->response->setStatusCode(400);
+        try {
+            $data = (new FMSStorageObjectService())->readLocal($key);
+            return $this->response
+                ->setStatusCode(200)
+                ->setContentType($data['content_type'])
+                ->setHeader('Content-Disposition', 'inline; filename="' . basename($key) . '"')
+                ->setHeader('Content-Length', (string) $data['byte_size'])
+                ->setHeader('Cache-Control', 'private, max-age=3600')
+                ->setBody($data['body']);
+        } catch (Throwable $e) {
+            return $this->response->setStatusCode(404);
+        }
+    }

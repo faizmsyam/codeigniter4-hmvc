@@ -10,6 +10,7 @@ final class FMSStorageBackendController extends FMSController
     {
         $user = (new FMSStorageSessionService())->resolve((string) $this->request->getCookie(FMSStorageSessionService::COOKIE_NAME));
         $this->fmsMeta(['title' => 'FMS Storage']);
+        $this->fmsBottomScript($this->assetBasePath.'/js/storage.js');
         return $this->fmsLayout('index', ['storageUser' => $user]);
     }
 
