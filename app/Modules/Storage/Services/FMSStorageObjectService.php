@@ -30,26 +30,66 @@ final class FMSStorageObjectService
         $uploads = $this->uploadsConfig();
         $root = rtrim($uploads->storageRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $uploads->bucketName;
         $base = realpath($root);
-        if ($base === false) return [];
+        if ($base === false) {
+            return ['bucket' => $uploads->bucketName, 'prefix' => '', 'folders' => [], 'files' => []];
+        }
+
         $prefix = trim(str_replace('\\', '/', $prefix), '/');
-        $directory = $base . ($prefix !== '' ? DIRECTORY_SEPARATOR . $prefix : '');
+        $searchPrefix = $prefix !== '' ? $prefix . '/' : '';
+        $directory = $base . ($prefix !== '' ? DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $prefix) : '');
         $realDirectory = realpath($directory);
-        if ($realDirectory === false || !str_starts_with($realDirectory, $base)) return [];
-        $items = [];
-        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($realDirectory, \FilesystemIterator::SKIP_DOTS));
+        if ($realDirectory === false || !str_starts_with($realDirectory, $base)) {
+            return ['bucket' => $uploads->bucketName, 'prefix' => $prefix, 'folders' => [], 'files' => []];
+        }
+
+        $allItems = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($realDirectory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
         foreach ($iterator as $file) {
             if (!$file->isFile() || $file->isLink()) continue;
             $key = ltrim(str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($base))), '/');
-            $items[] = [
+            $allItems[] = [
                 'key' => $key,
                 'name' => basename($key),
                 'size' => $file->getSize(),
                 'mime' => (new \finfo(FILEINFO_MIME_TYPE))->file($file->getPathname()) ?: 'application/octet-stream',
-                'updated_at' => date(DATE_ATOM, $file->getMTime()),
+                'updated_at' => date('Y-m-d H:i:s', $file->getMTime()),
             ];
         }
-        usort($items, static fn($a, $b) => strcmp($a['key'], $b['key']));
-        return $items;
+
+        $folders = [];
+        $files = [];
+        $seen = [];
+
+        foreach ($allItems as $item) {
+            $relative = $searchPrefix !== '' && str_starts_with($item['key'], $searchPrefix)
+                ? substr($item['key'], strlen($searchPrefix))
+                : ($searchPrefix === '' ? $item['key'] : null);
+            if ($relative === null || $relative === '') continue;
+
+            $slashPos = strpos($relative, '/');
+            if ($slashPos !== false) {
+                $folderName = substr($relative, 0, $slashPos);
+                if (!isset($seen[$folderName])) {
+                    $folders[] = ['name' => $folderName, 'prefix' => $searchPrefix . $folderName];
+                    $seen[$folderName] = true;
+                }
+            } else {
+                $files[] = $item;
+            }
+        }
+
+        usort($folders, static fn($a, $b) => strcmp($a['name'], $b['name']));
+        usort($files, static fn($a, $b) => strcmp($a['name'], $b['name']));
+
+        return [
+            'bucket' => $uploads->bucketName,
+            'prefix' => $prefix,
+            'folders' => $folders,
+            'files' => $files,
+        ];
     }
 
     public function upload(UploadedFile $file, string $prefix = ''): array

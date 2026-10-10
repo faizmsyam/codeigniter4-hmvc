@@ -64,9 +64,8 @@ final class FMSStorageApiController extends FMSController
     {
         if (! $this->allowed(FMSStorageAuthorizationService::READ)) return $this->deny();
         try {
-            return $this->json(['status' => true, 'data' => [
-                'objects' => (new FMSStorageObjectService())->list((string) $this->request->getGet('prefix')),
-            ]]);
+            $result = (new FMSStorageObjectService())->list((string) $this->request->getGet('prefix'));
+            return $this->json(['status' => true, 'data' => $result]);
         } catch (Throwable $e) {
             return $this->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
