@@ -110,10 +110,12 @@
       FMS.confirm({
         title: 'Konfirmasi Hapus',
         message: 'Object ini akan dihapus permanen. Lanjutkan?',
-        confirmText: 'Hapus',
-        cancelText: 'Batal',
-        onConfirm: function () {
-          return FMS.del(api + '/objects', { key: key }, { blockUI: true })
+        confirmLabel: 'Hapus',
+        cancelLabel: 'Batal',
+        loadingLabel: 'Menghapus...',
+        variant: 'danger',
+        action: function () {
+          return FMS.del(api + '/objects', { key: key })
             .then(function () {
               FMS.toast('Object berhasil dihapus.', true);
               load(currentPrefix);

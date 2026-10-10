@@ -36,7 +36,9 @@ final class FMSStorageObjectService
 
         $prefix = trim(str_replace('\\', '/', $prefix), '/');
         $searchPrefix = $prefix !== '' ? $prefix . '/' : '';
-        $directory = $base . ($prefix !== '' ? DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $prefix) : '');
+        $physicalPrefix = trim((string) $uploads->objectKeyPrefix, '/');
+        $physicalRoot = $base . ($physicalPrefix !== '' ? DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $physicalPrefix) : '');
+        $directory = $physicalRoot . ($prefix !== '' ? DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $prefix) : '');
         $realDirectory = realpath($directory);
         if ($realDirectory === false || !str_starts_with($realDirectory, $base)) {
             return ['bucket' => $uploads->bucketName, 'prefix' => $prefix, 'folders' => [], 'files' => []];
@@ -49,7 +51,8 @@ final class FMSStorageObjectService
         );
         foreach ($iterator as $file) {
             if (!$file->isFile() || $file->isLink()) continue;
-            $key = ltrim(str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($base))), '/');
+            $key = $this->logicalKey(ltrim(str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($base))), '/'));
+            if ($key === '') continue;
             $allItems[] = [
                 'key' => $key,
                 'name' => basename($key),
@@ -90,6 +93,43 @@ final class FMSStorageObjectService
             'folders' => $folders,
             'files' => $files,
         ];
+    }
+
+    public function metadata(string $key): array
+    {
+        $safeKey = $this->safeKey($key);
+        $storage = $this->storage();
+        $object = $storage->readObject($safeKey);
+        $absolutePath = method_exists($storage, 'absolutePath') ? $storage->absolutePath($safeKey) : null;
+        $modifiedAt = is_string($absolutePath) && is_file($absolutePath) ? filemtime($absolutePath) : time();
+
+        return [
+            'key' => $safeKey,
+            'name' => basename($safeKey),
+            'mime' => $object['content_type'],
+            'size' => $object['byte_size'],
+            'etag' => '"' . md5($object['body']) . '"',
+            'sha256' => $object['sha256'],
+            'updated_at' => date(DATE_ATOM, (int) $modifiedAt),
+            'storage_class' => 'STANDARD',
+            'driver' => $storage->driverName(),
+            'bucket' => $storage->bucketName(),
+        ];
+    }
+
+    public function download(string $key): array
+    {
+        return $this->storage()->readObject($this->safeKey($key));
+    }
+
+    private function logicalKey(string $physicalKey): string
+    {
+        $prefix = trim((string) $this->uploadsConfig()->objectKeyPrefix, '/');
+        $physicalKey = ltrim(str_replace('\\', '/', $physicalKey), '/');
+        if ($prefix !== '' && ($physicalKey === $prefix || str_starts_with($physicalKey, $prefix . '/'))) {
+            return ltrim(substr($physicalKey, strlen($prefix)), '/');
+        }
+        return $physicalKey;
     }
 
     public function upload(UploadedFile $file, string $prefix = ''): array

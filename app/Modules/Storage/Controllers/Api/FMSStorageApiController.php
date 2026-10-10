@@ -186,3 +186,27 @@ final class FMSStorageApiController extends FMSController
             return $this->response->setStatusCode(404);
         }
     }
+
+    public function changePassword(): ResponseInterface
+    {
+        $user = $this->user();
+        if (! $user) return $this->json(['status' => false, 'message' => 'Sesi tidak valid.'], 401);
+
+        $data = $this->request->getJSON(true) ?: $this->request->getPost();
+        if (! password_verify((string) ($data['current_password'] ?? ''), (string) ($user['password_hash'] ?? ''))) {
+            return $this->json(['status' => false, 'message' => 'Password saat ini salah.'], 422);
+        }
+
+        $password = (string) ($data['new_password'] ?? '');
+        if (strlen($password) < 12) {
+            return $this->json(['status' => false, 'message' => 'Password minimal 12 karakter.'], 422);
+        }
+
+        (new FMSStorageUserModel())->update((int) $user['id'], [
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'password_changed_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->json(['status' => true, 'message' => 'Password berhasil diubah.']);
+    }
+}
