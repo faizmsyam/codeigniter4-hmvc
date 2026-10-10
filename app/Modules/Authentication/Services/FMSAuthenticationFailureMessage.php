@@ -36,10 +36,14 @@ final class FMSAuthenticationFailureMessage
             return 'Akun terkunci sementara karena terlalu banyak percobaan login.';
         }
 
+        $timezoneName = function_exists('app_timezone')
+            ? app_timezone()
+            : (string) (config('App')->appTimezone ?? 'Asia/Jakarta');
+        $timezone = new DateTimeZone($timezoneName);
         $timestamp = DateTimeImmutable::createFromFormat(
             'Y-m-d H:i:s',
             $lockedUntil,
-            new DateTimeZone('Asia/Jakarta'),
+            $timezone,
         );
         if ($timestamp === false) {
             return 'Akun terkunci sampai ' . $lockedUntil . '.';
@@ -60,12 +64,14 @@ final class FMSAuthenticationFailureMessage
             12 => 'Desember',
         ];
 
+        $zoneLabel = $timestamp->format('T');
         return sprintf(
-            'Akun terkunci sampai %s %s %s %s WIB.',
+            'Akun terkunci sampai %s %s %s %s %s.',
             $timestamp->format('d'),
             $monthNames[(int) $timestamp->format('n')],
             $timestamp->format('Y'),
             $timestamp->format('H:i'),
+            $zoneLabel,
         );
     }
 }

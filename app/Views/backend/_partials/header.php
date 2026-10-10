@@ -252,17 +252,47 @@
     const clockTime = clockEl ? clockEl.querySelector(".live-clock-time") : null;
     if (!clockDate || !clockTime) return;
 
-    const hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
-    const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const timezoneLabels = {
+      "Asia/Jakarta": "WIB",
+      "Asia/Pontianak": "WIB",
+      "Asia/Makassar": "WITA",
+      "Asia/Ujung_Pandang": "WITA",
+      "Asia/Jayapura": "WIT",
+      "Asia/Manokwari": "WIT"
+    };
+    const fallbackTimezone = "Asia/Jakarta";
+    let timezone = fallbackTimezone;
+
+    try {
+      const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (Object.prototype.hasOwnProperty.call(timezoneLabels, detectedTimezone)) {
+        timezone = detectedTimezone;
+      }
+    } catch (error) {
+      timezone = fallbackTimezone;
+    }
+
+    const timezoneLabel = timezoneLabels[timezone];
+    const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+      timeZone: timezone,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+    const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23"
+    });
 
     function updateClock() {
       const now = new Date();
-      const time = [now.getHours(), now.getMinutes(), now.getSeconds()]
-        .map(function(value) { return String(value).padStart(2, "0"); })
-        .join(":");
-
-      clockDate.textContent = `${hari[now.getDay()]}, ${now.getDate()} ${bulan[now.getMonth()]} ${now.getFullYear()}`;
-      clockTime.textContent = `${time} WIB`;
+      clockDate.textContent = dateFormatter.format(now);
+      clockTime.textContent = `${timeFormatter.format(now)} ${timezoneLabel}`;
+      clockEl.setAttribute("title", `Zona waktu: ${timezone} (${timezoneLabel})`);
     }
 
     updateClock();

@@ -313,17 +313,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }[statusValue] || (statusValue ? statusValue.charAt(0).toUpperCase() + statusValue.slice(1) : `-`);
   }
 
+  const profileTimezoneLabels = {
+    "Asia/Jakarta": "WIB",
+    "Asia/Pontianak": "WIB",
+    "Asia/Makassar": "WITA",
+    "Asia/Ujung_Pandang": "WITA",
+    "Asia/Jayapura": "WIT",
+    "Asia/Manokwari": "WIT"
+  };
+  const profileFallbackTimezone = "Asia/Jakarta";
+  let profileTimezone = profileFallbackTimezone;
+  try {
+    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (Object.prototype.hasOwnProperty.call(profileTimezoneLabels, detectedTimezone)) {
+      profileTimezone = detectedTimezone;
+    }
+  } catch (error) {
+    profileTimezone = profileFallbackTimezone;
+  }
+  const profileTimezoneLabel = profileTimezoneLabels[profileTimezone];
+
   function formatDateValue(dateValue, withTime) {
     if (!dateValue) return `-`;
-    const parsed = new Date(String(dateValue).replace(` `, `T`));
+    const normalizedDate = String(dateValue).trim().replace(` `, `T`);
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalizedDate);
+    const parsed = new Date(hasTimezone ? normalizedDate : `${normalizedDate}+07:00`);
     if (isNaN(parsed.getTime())) return `-`;
-    const months = [`Jan`, `Feb`, `Mar`, `Apr`, `Mei`, `Jun`, `Jul`, `Agu`, `Sep`, `Okt`, `Nov`, `Des`];
-    const day = String(parsed.getDate()).padStart(2, `0`);
-    const month = months[parsed.getMonth()];
-    const year = parsed.getFullYear();
-    return withTime
-      ? `${day} ${month} ${year}, ${String(parsed.getHours()).padStart(2, `0`)}:${String(parsed.getMinutes()).padStart(2, `0`)} WIB`
-      : `${day} ${month} ${year}`;
+    const dateFormatter = new Intl.DateTimeFormat(`id-ID`, {
+      timeZone: profileTimezone,
+      day: `2-digit`,
+      month: `short`,
+      year: `numeric`
+    });
+    const formattedDate = dateFormatter.format(parsed);
+    if (!withTime) return formattedDate;
+    const timeFormatter = new Intl.DateTimeFormat(`id-ID`, {
+      timeZone: profileTimezone,
+      hour: `2-digit`,
+      minute: `2-digit`,
+      hourCycle: `h23`
+    });
+    return `${formattedDate}, ${timeFormatter.format(parsed)} ${profileTimezoneLabel}`;
   }
 
   function renderProfile(body) {
