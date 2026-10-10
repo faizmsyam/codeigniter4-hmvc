@@ -221,31 +221,6 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
   </div>
 </div>
 
-<!-- ================= MODAL DELETE MENU ================= -->
-<div class="modal fade" id="menuDeleteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title text-danger">
-          <i class="ri-delete-bin-line me-1"></i> Hapus Menu
-        </h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body pt-2 pb-1">
-        Hapus <strong id="menuDeleteName" class="text-danger"></strong>?
-        <br><small class="text-muted">Menu yang punya sub menu tidak bisa dihapus.</small>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-danger btn-sm" id="menuDeleteConfirm">
-          <span id="menuDeleteBtnText">Hapus</span>
-          <span id="menuDeleteBtnSpinner" class="spinner-border spinner-border-sm ms-1 d-none"></span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ================= MODAL HAK TOMBOL ================= -->
 <div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -281,7 +256,6 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
 
     var actionModal = new bootstrap.Modal(document.getElementById('actionModal'));
     var menuModal = new bootstrap.Modal(document.getElementById('menuModal'));
-    var deleteModal = new bootstrap.Modal(document.getElementById('menuDeleteModal'));
     var phosphorModalEl = document.getElementById('phosphorIconModal');
     var phosphorModal = phosphorModalEl ? new bootstrap.Modal(phosphorModalEl) : null;
 
@@ -560,14 +534,9 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
     var menuParentName = document.getElementById('menuParentName');
     var menuSaveBtn = document.getElementById('menuSaveBtn');
     var menuSaveBtnSpinner = document.getElementById('menuSaveBtnSpinner');
-    var menuDeleteModal = document.getElementById('menuDeleteModal');
-    var menuDeleteConfirm = document.getElementById('menuDeleteConfirm');
-    var menuDeleteBtnSpinner = document.getElementById('menuDeleteBtnSpinner');
-    var menuDeleteName = document.getElementById('menuDeleteName');
 
     var rawMenuRows = [];
     var collapsedNodes = Object.create(null);
-    var pendingDeleteId = null;
 
     var fieldMap = {
       name: 'menuName',
@@ -620,11 +589,6 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
     function setSaveLoading(loading) {
       menuSaveBtn.disabled = loading;
       menuSaveBtnSpinner.classList.toggle('d-none', !loading);
-    }
-
-    function setDeleteLoading(loading) {
-      menuDeleteConfirm.disabled = loading;
-      menuDeleteBtnSpinner.classList.toggle('d-none', !loading);
     }
 
     function value(id, nextValue) {
@@ -974,25 +938,21 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
     }
 
     function openDeleteModal(menuIdentifier, menuNameStr) {
-      pendingDeleteId = menuIdentifier;
-      menuDeleteName.textContent = menuNameStr;
-      deleteModal.show();
-    }
-
-    menuDeleteConfirm.onclick = function() {
-      if (!pendingDeleteId) return;
-      setDeleteLoading(true);
-      FMS.del(BASE_URL + '/' + pendingDeleteId).then(function(res) {
-        setDeleteLoading(false);
-        deleteModal.hide();
-        FMS.toast('Menu berhasil dihapus', 'success');
-        loadData();
-      }).catch(function(err) {
-        setDeleteLoading(false);
-        deleteModal.hide();
-        FMS.toast(err.message || 'Gagal menghapus', 'danger');
+      FMS.confirm({
+        title: `Hapus Menu`,
+        message: `Hapus menu "${menuNameStr}"?`,
+        description: `Menu yang punya sub menu tidak bisa dihapus.`,
+        confirmLabel: `Hapus`,
+        loadingLabel: `Menghapus...`,
+        variant: `danger`,
+        action: function() {
+          return FMS.del(`${BASE_URL}/${menuIdentifier}`).then(function(res) {
+            FMS.toast(`Menu berhasil dihapus`, `success`);
+            loadData();
+          });
+        }
       });
-    };
+    }
 
     menuForm.onsubmit = function(e) {
       e.preventDefault();

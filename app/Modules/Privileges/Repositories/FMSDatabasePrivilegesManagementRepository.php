@@ -67,6 +67,9 @@ final class FMSDatabasePrivilegesManagementRepository implements FMSPrivilegesMa
         if ($includeDeleted) {
             $groupQuery = $groupQuery->withDeleted();
         }
+        if (($searchFilters['exclude_super_administrator'] ?? false) === true) {
+            $groupQuery->where('id !=', 1);
+        }
 
         $searchTerm = trim((string) ($searchFilters['search'] ?? ''));
         if ($searchTerm !== '') {
@@ -521,7 +524,8 @@ final class FMSDatabasePrivilegesManagementRepository implements FMSPrivilegesMa
                 ->where('c_permissions.source_menu_id', $menuIdentifier)
                 ->orWhere('c_permissions.source_menu_id', null)
             ->groupEnd()
-            ->orderBy('c_permissions.action_name', 'ASC')
+            ->orderBy("CASE action_name WHEN 'create' THEN 1 WHEN 'update' THEN 2 WHEN 'delete' THEN 3 ELSE 4 END", '', false)
+            ->orderBy('c_permissions.id', 'ASC')
             ->findAll();
 
         return is_array($rows) ? array_values($rows) : [];

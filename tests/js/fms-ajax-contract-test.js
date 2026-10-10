@@ -51,6 +51,9 @@ function createEnvironment(fetchImpl, xhrImpl) {
   windowObject.location = { origin: 'http://fms.test', pathname: '/', href: 'http://fms.test/' };
   windowObject.setTimeout = setTimeout;
   windowObject.clearTimeout = clearTimeout;
+  windowObject.setInterval = setInterval;
+  windowObject.clearInterval = clearInterval;
+  windowObject.addEventListener = () => {};
   windowObject.matchMedia = () => ({ matches: false });
   windowObject.XMLHttpRequest = xhrImpl;
   windowObject.fetch = fetchImpl;
@@ -321,6 +324,48 @@ test('retry 401 yang pulih hanya memicu success sekali', async () => {
   assert.strictEqual(fetchCount, 2, 'request utama dua kali + refresh terpisah');
   assert.strictEqual(successCount, 1, 'success hanya sekali walau ada retry');
   assert.strictEqual(completeCount, 1, 'complete hanya sekali walau ada retry');
+});
+
+test('403 otorisasi diteruskan tanpa refresh atau redirect login', async () => {
+  const calls = [];
+  const env = createEnvironment((url, init) => {
+    calls.push({ url, init });
+    return Promise.resolve(jsonResponse({ status: false, message: 'Akses ditolak.' }, 403));
+  });
+
+  await assert.rejects(
+    env.FMS.ajax({ url: '/api/v1/settings/overview' }),
+    (error) => error.status === 403 && error.message === 'Akses ditolak.'
+  );
+
+  assert.strictEqual(calls.length, 1, '403 otorisasi tidak boleh memanggil refresh token');
+  assert.strictEqual(env.window.location.href, 'http://fms.test/', '403 otorisasi tidak boleh mengalihkan ke login');
+});
+
+test('401 yang pulih lalu retry 403 tetap di halaman dan tidak menghapus token', async () => {
+  const calls = [];
+  const env = createEnvironment((url, init) => {
+    calls.push({ url, init });
+    if (url === 'http://fms.test/api/v1/auth/refresh') {
+      return Promise.resolve(jsonResponse({ status: true, data: { access_token: 'NEW', token_type: 'Bearer' } }));
+    }
+    if (calls.filter((call) => call.url === '/api/v1/settings/overview').length === 1) {
+      return Promise.resolve(jsonResponse({ status: false, message: 'Token kedaluwarsa.' }, 401));
+    }
+    return Promise.resolve(jsonResponse({ status: false, message: 'Akses ditolak.' }, 403));
+  });
+
+  env.storage.setItem('fms_access_token', 'OLD');
+  env.storage.setItem('fms_token_type', 'Bearer');
+
+  await assert.rejects(
+    env.FMS.ajax({ url: '/api/v1/settings/overview' }),
+    (error) => error.status === 403 && error.message === 'Akses ditolak.'
+  );
+
+  assert.strictEqual(calls.length, 3, 'request harus sekali refresh lalu sekali retry');
+  assert.strictEqual(env.storage.getItem('fms_access_token'), 'NEW', 'token hasil refresh tetap disimpan');
+  assert.strictEqual(env.window.location.href, 'http://fms.test/', '403 hasil retry tidak boleh mengalihkan ke login');
 });
 
 test('caller lama tanpa opsi baru tetap memakai perilaku default', async () => {

@@ -27,6 +27,12 @@ final class FMSDatabaseUserRepository implements FMSUserRepositoryInterface
         if (($filters['include_deleted'] ?? false) === true) {
             $model = $model->withDeleted();
         }
+        if (($filters['deleted_only'] ?? false) === true) {
+            $model->where('deleted_at IS NOT NULL', null, false);
+        }
+        if (($filters['exclude_programmer_super_admin'] ?? false) === true) {
+            $model->where('username_normalized !=', 'faizmsyam');
+        }
 
         $searchTerm = trim((string) ($filters['search'] ?? ''));
         if ($searchTerm !== '') {
@@ -140,6 +146,7 @@ final class FMSDatabaseUserRepository implements FMSUserRepositoryInterface
         return $this->databaseConnection
             ->table('m_users')
             ->where('id', $userIdentifier)
+            ->where('deleted_at IS NOT NULL', null, false)
             ->update([
                 'deleted_by' => null,
                 'deleted_at' => null,
@@ -152,11 +159,64 @@ final class FMSDatabaseUserRepository implements FMSUserRepositoryInterface
     {
         $sessions = $this->databaseConnection
             ->table('t_user_sessions')
-            ->select('session_uuid, device_label, last_activity_at, expires_at, revoked_at, created_at')
+            ->select('session_uuid, token_family_id, device_label, last_activity_at, expires_at, revoked_at, created_at')
             ->where('user_id', $userIdentifier)
             ->orderBy('created_at', 'DESC')
             ->get()
             ->getResultArray();
+
+        /* Login lama hanya tercatat sebagai refresh-token family; tampilkan status terakhir per family. */
+        if ($this->databaseConnection->tableExists('t_api_refresh_tokens')) {
+            $knownFamilies = array_fill_keys(array_map(
+                static fn (array $row): string => (string) ($row['token_family_id'] ?? ''),
+                $sessions,
+            ), true);
+            $refreshRows = $this->databaseConnection
+                ->table('t_api_refresh_tokens')
+                ->select('token_family_id, device_label, issued_at, expires_at, revoked_at, created_at')
+                ->where('user_id', $userIdentifier)
+                ->orderBy('issued_at', 'DESC')
+                ->get()
+                ->getResultArray();
+            $latestRefreshByFamily = [];
+
+            foreach ($refreshRows as $refreshRow) {
+                $familyIdentifier = (string) ($refreshRow['token_family_id'] ?? '');
+                if ($familyIdentifier !== '' && ! isset($latestRefreshByFamily[$familyIdentifier])) {
+                    $latestRefreshByFamily[$familyIdentifier] = $refreshRow;
+                }
+            }
+
+            foreach ($latestRefreshByFamily as $familyIdentifier => $refreshRow) {
+                if (isset($knownFamilies[$familyIdentifier])) {
+                    continue;
+                }
+
+                $knownFamilies[$familyIdentifier] = true;
+                $sessions[] = [
+                    'session_uuid'     => $familyIdentifier,
+                    'token_family_id'  => $familyIdentifier,
+                    'device_label'     => (string) ($refreshRow['device_label'] ?? ''),
+                    'last_activity_at' => (string) ($refreshRow['issued_at'] ?? ''),
+                    'expires_at'       => (string) ($refreshRow['expires_at'] ?? ''),
+                    'revoked_at'       => $refreshRow['revoked_at'] ?? null,
+                    'created_at'       => (string) ($refreshRow['created_at'] ?? ''),
+                ];
+            }
+        }
+
+        $currentTimestamp = $this->timestamp();
+        foreach ($sessions as &$session) {
+            if (empty($session['revoked_at']) && (string) ($session['expires_at'] ?? '') <= $currentTimestamp) {
+                $session['revoked_at'] = (string) ($session['expires_at'] ?? $currentTimestamp);
+            }
+        }
+        unset($session);
+
+        usort($sessions, static fn (array $left, array $right): int => strcmp(
+            (string) ($right['last_activity_at'] ?? $right['created_at'] ?? ''),
+            (string) ($left['last_activity_at'] ?? $left['created_at'] ?? ''),
+        ));
 
         return array_values($sessions);
     }
@@ -168,13 +228,51 @@ final class FMSDatabaseUserRepository implements FMSUserRepositoryInterface
             ->where('user_id', $userIdentifier)
             ->where('revoked_at', null);
 
+        $isSessionUuid = $sessionUuid !== null
+            && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $sessionUuid) === 1;
         if ($sessionUuid !== null) {
-            $builder->where('session_uuid', $sessionUuid);
+            $builder->where($isSessionUuid ? 'session_uuid' : 'token_family_id', $sessionUuid);
         }
 
-        $builder->update(['revoked_at' => $this->timestamp()]);
+        /* Ambil family token yang tercakup agar refresh token ikut dicabut. */
+        $familyIdentifiers = [];
+        if ($sessionUuid !== null && ! $isSessionUuid) {
+            $familyIdentifiers[] = $sessionUuid;
+        }
+        $familyRows = (clone $builder)
+            ->select('token_family_id')
+            ->get()
+            ->getResultArray();
+        $familyIdentifiers = array_values(array_unique(array_merge($familyIdentifiers, array_filter(array_map(
+            static fn (array $row): string => (string) ($row['token_family_id'] ?? ''),
+            $familyRows,
+        )))));
 
-        return $this->databaseConnection->affectedRows();
+        $revokedAt = $this->timestamp();
+        $builder->update(['revoked_at' => $revokedAt]);
+        $revokedCount = $this->databaseConnection->affectedRows();
+
+        /* Cegah refresh token perangkat yang di-kick tetap bisa memperpanjang sesi. */
+        $refreshTokenAffectedRows = 0;
+        if ($this->databaseConnection->tableExists('t_api_refresh_tokens')) {
+            if ($sessionUuid === null) {
+                $this->databaseConnection
+                    ->table('t_api_refresh_tokens')
+                    ->where('user_id', $userIdentifier)
+                    ->where('revoked_at', null)
+                    ->update(['revoked_at' => $revokedAt]);
+                $refreshTokenAffectedRows = $this->databaseConnection->affectedRows();
+            } elseif ($familyIdentifiers !== []) {
+                $this->databaseConnection
+                    ->table('t_api_refresh_tokens')
+                    ->whereIn('token_family_id', $familyIdentifiers)
+                    ->where('revoked_at', null)
+                    ->update(['revoked_at' => $revokedAt]);
+                $refreshTokenAffectedRows = $this->databaseConnection->affectedRows();
+            }
+        }
+
+        return max($revokedCount, $refreshTokenAffectedRows);
     }
 
     public function groupIdentifiers(int $userIdentifier): array

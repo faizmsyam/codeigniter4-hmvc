@@ -1,6 +1,12 @@
 <?php
 
+use App\Modules\Authentication\Controllers\FMSAuthenticationController;
+use CodeIgniter\Router\RouteCollection;
+
 /**
- * Legacy include retained for installations that still load module Routes.php.
- * Application route discovery uses PublicRoutes.php, ApiRoutes.php and BackendRoutes.php.
+ * Backend routes for Authentication module.
+ * These are loaded INSIDE the ROUTE_ADMIN group (fms-admin).
+ *
+ * @var RouteCollection $routes
  */
+$routes->get('change-password', [FMSAuthenticationController::class, 'changePassword'], ['as' => 'fms.admin.change-password']);

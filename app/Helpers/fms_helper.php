@@ -3,19 +3,29 @@
 if (!function_exists('minifier')) {
 	function minifier($code)
 	{
+		// Protect </script> inside JS string literals from being mangled by the
+		// HTML-minification pass. This is safe to apply broadly because:
+		//   - Actual HTML closing tags are still processed by the later unescape.
+		//   - The minifier never needs to collapse whitespace around </script>.
+		$code = str_replace('<\/script>', "\x00SCRIPT_ESC\x00", $code);
+
 		$search = array(
-      // Remove whitespaces after tags
-      '/\>[^\S ]+/s',
-      // Remove whitespaces before tags
-      '/[^\S ]+\</s',
-      // Remove multiple whitespace sequences
-      '/(\s)+/s',
-      // Removes comments
-      '/<!--(.|\s)*?-->/'
-    );
-    $replace = array('>', '<', '\\1');
-    $code = preg_replace($search, $replace, $code);
-    return $code;
+			// Remove whitespaces after tags
+			'/\>[^\S ]+/s',
+			// Remove whitespaces before tags
+			'/[^\S ]+\</s',
+			// Remove multiple whitespace sequences
+			'/(\s)+/s',
+			// Removes HTML comments
+			'/<!--(.|\s)*?-->/'
+		);
+		$replace = array('>', '<', '$1', '');
+		$code = preg_replace($search, $replace, $code);
+
+		// Restore escaped script closes
+		$code = str_replace("\x00SCRIPT_ESC\x00", '<\/script>', $code);
+
+		return $code;
 	}
 }
 

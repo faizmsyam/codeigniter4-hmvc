@@ -26,6 +26,11 @@ final class FMSUserServicePersistenceTest extends CIUnitTestCase
         $this->assertSame('operator.one', $repository->users[1]['username_normalized']);
         $this->assertTrue(password_verify('Strong-Passphrase-2026', $repository->users[1]['password_hash']));
 
+        $repository->users[1]['token_version'] = 1;
+        $repository->users[1]['session_version'] = 1;
+        $repository->users[1]['email_verified_at'] = null;
+        $repository->users[1]['registration_source'] = 'public';
+
         $this->assertTrue($userService->updateByUuid($repository->users[1]['uuid'], [
             'email' => 'new@example.test',
         ], 8));
@@ -33,16 +38,29 @@ final class FMSUserServicePersistenceTest extends CIUnitTestCase
         $this->assertSame(2, $repository->users[1]['token_version']);
         $this->assertSame(2, $repository->users[1]['session_version']);
 
-        $this->assertTrue($userService->verifyEmailByUuid($repository->users[1]['uuid'], 8));
-        $this->assertNotNull($repository->users[1]['email_verified_at']);
+        $repository->users[1]['email_verified_at'] = '2026-10-10 10:00:00';
+        try {
+            $userService->updateByUuid($repository->users[1]['uuid'], [
+                'email' => 'locked@example.test',
+            ], 8);
+            $this->fail('Verified email change should be rejected.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertSame('Verified email cannot be changed.', $exception->getMessage());
+        }
+        $this->assertSame('new@example.test', $repository->users[1]['email']);
+
         $this->assertTrue($userService->unverifyEmailByUuid($repository->users[1]['uuid'], 8));
         $this->assertNull($repository->users[1]['email_verified_at']);
 
         $repository->users[1]['failed_login_count'] = 6;
         $repository->users[1]['locked_until'] = '2026-12-31 00:00:00';
+        $repository->users[1]['status'] = 'locked';
+        $tokenVersionBeforeUnlock = $repository->users[1]['token_version'];
         $this->assertTrue($userService->unlockByUuid($repository->users[1]['uuid'], 8));
         $this->assertSame(0, $repository->users[1]['failed_login_count']);
         $this->assertNull($repository->users[1]['locked_until']);
+        $this->assertSame('active', $repository->users[1]['status']);
+        $this->assertSame($tokenVersionBeforeUnlock + 1, $repository->users[1]['token_version']);
 
         $this->assertTrue($userService->resetPasswordByUuid(
             $repository->users[1]['uuid'],
@@ -75,6 +93,7 @@ final class FMSUserServicePersistenceTest extends CIUnitTestCase
             ['session_uuid' => '11111111-1111-4111-8111-111111111111', 'revoked_at' => null],
             ['session_uuid' => '22222222-2222-4222-8222-222222222222', 'revoked_at' => null],
         ];
+        $tokenVersionBeforeRevocation = $repository->users[1]['token_version'];
 
         $this->assertCount(2, $userService->sessionsByUuid($userUuid));
         $this->assertSame(1, $userService->revokeSessionsByUuid(
@@ -83,10 +102,12 @@ final class FMSUserServicePersistenceTest extends CIUnitTestCase
             '11111111-1111-4111-8111-111111111111',
         ));
         $this->assertSame(2, $repository->users[1]['session_version']);
+        $this->assertSame($tokenVersionBeforeRevocation + 1, $repository->users[1]['token_version']);
+        $this->assertNotNull($repository->sessions[1][0]['revoked_at']);
 
         $userService->replaceGroupsByUuid($userUuid, [5, '2', 5], 9);
         $this->assertSame([2, 5], $userService->groupsByUuid($userUuid));
-        $this->assertSame(2, $repository->users[1]['token_version']);
+        $this->assertSame($tokenVersionBeforeRevocation + 2, $repository->users[1]['token_version']);
     }
 
     public function testListOutputNeverExposesPasswordHash(): void
@@ -230,7 +251,6 @@ final class FMSInMemoryUserRepository implements FMSUserRepositoryInterface
         }
         $this->users[$userIdentifier]['deleted_at'] = null;
         $this->users[$userIdentifier]['deleted_by'] = null;
-
         return true;
     }
 
@@ -242,14 +262,13 @@ final class FMSInMemoryUserRepository implements FMSUserRepositoryInterface
     public function revokeSessions(int $userIdentifier, ?string $sessionUuid = null): int
     {
         $revoked = 0;
-        foreach ($this->sessions[$userIdentifier] ?? [] as &$session) {
+        foreach ($this->sessions[$userIdentifier] ?? [] as $index => $session) {
             if ($session['revoked_at'] !== null || ($sessionUuid !== null && $session['session_uuid'] !== $sessionUuid)) {
                 continue;
             }
-            $session['revoked_at'] = '2026-09-29 00:00:00';
+            $this->sessions[$userIdentifier][$index]['revoked_at'] = '2026-09-29 00:00:00';
             $revoked++;
         }
-        unset($session);
 
         return $revoked;
     }

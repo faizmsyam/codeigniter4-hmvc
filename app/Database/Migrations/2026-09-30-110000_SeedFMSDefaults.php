@@ -6,6 +6,7 @@ use App\Database\Seeds\FMSPrivilegesPermissionSeeder;
 use App\Database\Seeds\FMSPrivilegesDefaultGroupSeeder;
 use App\Database\Seeds\FMSProgrammerSuperAdminSeeder;
 use App\Database\Seeds\FMSAdminDemoUserSeeder;
+use App\Database\Seeds\FMSApiKeyAndBasicAuthSeeder;
 use CodeIgniter\Database\Migration;
 
 /**
@@ -27,12 +28,16 @@ final class SeedFMSDefaults extends Migration
         (new FMSPrivilegesDefaultGroupSeeder($config, $db))->run();
         (new FMSProgrammerSuperAdminSeeder($config, $db))->run();
         (new FMSAdminDemoUserSeeder($config, $db))->run();
+        (new FMSApiKeyAndBasicAuthSeeder($config, $db))->run();
     }
 
     public function down(): void
     {
         /* Rollback: bersihkan data yang di-seed; tabel dihapus oleh migration lain */
         $this->db->disableForeignKeyChecks();
+        $this->db->table('c_api_keys')->truncate();
+        $this->db->table('c_basic_auth_clients')->truncate();
+        $this->db->table('c_auth_settings')->truncate();
         $this->db->table('t_group_permissions')->truncate();
         $this->db->table('t_menu_permissions')->truncate();
         $this->db->table('c_permissions')->truncate();

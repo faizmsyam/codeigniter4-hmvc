@@ -55,6 +55,20 @@
   <div id="responsive-overlay"></div>
 
   <?php echo isset($fmsBottomScripts) ? $fmsBottomScripts : '' ?>
+  <script src="<?php echo esc(base_url('assets/fms/js/pwa.js?v=2'), 'attr') ?>"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.FMS && typeof window.FMS.initSessionGuard === 'function') {
+        window.FMS.initSessionGuard({
+          statusUrl: <?php echo json_encode(site_url('api/v1/auth/session-status')) ?>,
+          continueUrl: <?php echo json_encode(site_url('api/v1/auth/continue-session')) ?>,
+          loginUrl: <?php echo json_encode(site_url('fms-auth/in')) ?>,
+          pollMilliseconds: 30000,
+          warningSeconds: 300
+        });
+      }
+    });
+  </script>
 </body>
 
 </html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#625ffd">
+  <title>FMS — Offline</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --primary: #625ffd;
+      --bg: #07101f;
+      --card: #111c30;
+      --text: #eef2ff;
+      --muted: #9aa8be
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at top, #172448 0, #07101f 52%);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--text)
+    }
+
+    main {
+      width: min(440px, 100%);
+      padding: 36px 30px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 22px;
+      background: rgba(17, 28, 48, .92);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, .38);
+      text-align: center
+    }
+
+    .logo {
+      width: 82px;
+      height: 82px;
+      border-radius: 20px;
+      margin-bottom: 18px
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 26px
+    }
+
+    p {
+      margin: 0 0 24px;
+      color: var(--muted)
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 20px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <img class="logo" src="./assets/fms/pwa/icon-192.png" alt="FMS">
+    <h1>Koneksi terputus</h1>
+    <p>Halaman yang pernah dibuka masih tersedia. Sambungkan kembali perangkat untuk memuat data terbaru.</p>
+    <button type="button" onclick="location.reload()">Coba Lagi</button>
+  </main>
+</body>
+
+</html>

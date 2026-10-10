@@ -9,7 +9,7 @@ use Throwable;
 /**
  * @phpstan-type RegistrationResult array{status: string, verification_token?: array{selector: string, validator: string, expires_at: string}}
  * @phpstan-type VerificationResult array{status: string}
- * @phpstan-type ResendResult array{status: string}
+ * @phpstan-type ResendResult array{status: string, verification_token?: array{selector: string, validator: string, expires_at: string}, user?: array<string, mixed>}
  */
 final class FMSAuthenticationLifecycleService
 {
@@ -154,6 +154,52 @@ final class FMSAuthenticationLifecycleService
     }
 
     /**
+     * Issue a verification link for a known user after an authenticated
+     * administrative create flow. The caller remains responsible for sending
+     * the returned link through the configured email service.
+     *
+     * @return ResendResult
+     */
+    public function issueVerificationForUser(int $userIdentifier, string $currentTimestamp): array
+    {
+        if ($userIdentifier <= 0) {
+            throw new InvalidArgumentException('User identifier must be a positive integer.');
+        }
+
+        $userRecord = $this->lifecycleRepository->findUserById($userIdentifier);
+        if (! is_array($userRecord) || ! empty($userRecord['email_verified_at'])) {
+            return ['status' => self::STATUS_ACCEPTED];
+        }
+
+        $settings = $this->lifecycleRepository->authenticationSettings();
+        $verificationTokenTtlMinutes = max(1, (int) ($settings['verification_ttl_minutes'] ?? 1440));
+        $verificationExpiresAt = date('Y-m-d H:i:s', strtotime($currentTimestamp) + ($verificationTokenTtlMinutes * 60));
+        $verificationToken = $this->generateVerificationToken();
+
+        $this->lifecycleRepository->revokeUnusedVerificationTokens($userIdentifier, $currentTimestamp);
+        $this->lifecycleRepository->createVerificationToken([
+            'user_id' => $userIdentifier,
+            'selector' => $verificationToken['selector'],
+            'validator_hash' => hash('sha256', $verificationToken['validator']),
+            'purpose' => 'verify',
+            'expires_at' => $verificationExpiresAt,
+            'used_at' => null,
+            'revoked_at' => null,
+            'created_at' => $currentTimestamp,
+        ]);
+
+        return [
+            'status' => self::STATUS_ACCEPTED,
+            'verification_token' => [
+                'selector' => $verificationToken['selector'],
+                'validator' => $verificationToken['validator'],
+                'expires_at' => $verificationExpiresAt,
+            ],
+            'user' => $userRecord,
+        ];
+    }
+
+    /**
      * @return ResendResult
      */
     public function resendVerification(string $rawIdentity, string $currentTimestamp, ?string $clientIpAddress = null): array
@@ -191,7 +237,15 @@ final class FMSAuthenticationLifecycleService
             'created_at' => $currentTimestamp,
         ]);
 
-        return ['status' => self::STATUS_ACCEPTED];
+        return [
+            'status' => self::STATUS_ACCEPTED,
+            'verification_token' => [
+                'selector' => $verificationToken['selector'],
+                'validator' => $verificationToken['validator'],
+                'expires_at' => $verificationExpiresAt,
+            ],
+            'user' => $userRecord,
+        ];
     }
 
     /**

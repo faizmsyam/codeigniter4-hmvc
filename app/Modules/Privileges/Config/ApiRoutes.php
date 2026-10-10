@@ -35,11 +35,6 @@ $routes->group('menus', ['filter' => $privilegesApiFilter], static function (Rou
     $routes->put('(:segment)/permissions', [FMSPrivilegesApiController::class, 'replaceMenuPermissions'], ['as' => 'fms.api.v1.menus.permissions.replace']);
 });
 
-$routes->group('users', ['filter' => $privilegesApiFilter], static function (RouteCollection $routes): void {
-    $routes->get('(:segment)/groups', [FMSPrivilegesApiController::class, 'userGroups'], ['as' => 'fms.api.v1.users.groups.index']);
-    $routes->put('(:segment)/groups', [FMSPrivilegesApiController::class, 'replaceUserGroups'], ['as' => 'fms.api.v1.users.groups.replace']);
-});
-
 $routes->group('privileges', ['filter' => $privilegesApiFilter], static function (RouteCollection $routes): void {
     $routes->get('overview', [FMSPrivilegesApiController::class, 'overviewWithHashes'], ['as' => 'fms.api.v1.privileges.overview']);
     $routes->get('groups/(:segment)/permissions', [FMSPrivilegesApiController::class, 'groupPermissionsWithHash'], ['as' => 'fms.api.v1.privileges.group-permissions.index']);

@@ -254,6 +254,10 @@ final class FMSActivityLogService
             'entity_type'     => $activityLogRow['entity_type'] ?? null,
             'entity_id'       => $activityLogRow['entity_id'] ?? null,
             'description'     => $activityLogRow['description'] ?? null,
+            'has_changes'     => isset($activityLogRow['has_changes'])
+                ? (bool) $activityLogRow['has_changes']
+                : $this->decodePayload($activityLogRow['before_json'] ?? null) !== []
+                    || $this->decodePayload($activityLogRow['after_json'] ?? null) !== [],
             'before'          => $this->decodePayload($activityLogRow['before_json'] ?? null),
             'after'           => $this->decodePayload($activityLogRow['after_json'] ?? null),
             'metadata'        => $this->decodePayload($activityLogRow['metadata_json'] ?? null),

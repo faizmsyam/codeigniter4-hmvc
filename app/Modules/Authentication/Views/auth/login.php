@@ -1,3 +1,119 @@
+<?php
+/**
+ * Auth page theme toggle — seragam dengan backend (switcher offcanvas).
+ *
+ * Pakai radio button Light/Dark persis sama backend.
+ * custom-switcher.min.js handle localStorage + data-theme-mode.
+ *
+ * @author     Faiz Muhammad Syam, S.Kom, M.TI
+ * @license    FMS Signature
+ */
+?>
+
+<!-- Auth page theme toggle — single pill button, auto-syncs with backend system -->
+<div id="fms-auth-theme-switcher" class="fms-auth-theme-switcher" role="group" aria-label="Tema">
+  <button type="button" class="fms-auth-theme-switcher__btn" id="switcher-light-theme" title="Dark mode" aria-label="Switch to dark mode">
+    <i class="ti ti-moon" aria-hidden="true"></i>
+  </button>
+  <button type="button" class="fms-auth-theme-switcher__btn d-none" id="switcher-dark-theme" title="Light mode" aria-label="Switch to light mode">
+    <i class="ti ti-sun" aria-hidden="true"></i>
+  </button>
+</div>
+
+<style>
+  .fms-auth-theme-switcher {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1080;
+    display: flex;
+    border: 1px solid rgba(var(--primary-rgb), 0.25);
+    border-radius: 999px;
+    overflow: hidden;
+    background-color: var(--custom-white);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  }
+
+  [data-theme-mode="dark"] .fms-auth-theme-switcher {
+    background-color: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .fms-auth-theme-switcher__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .fms-auth-theme-switcher__btn:hover {
+    color: rgb(var(--primary-rgb));
+    background-color: rgba(var(--primary-rgb), 0.08);
+  }
+
+  [data-theme-mode="dark"] .fms-auth-theme-switcher__btn {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  [data-theme-mode="dark"] .fms-auth-theme-switcher__btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .fms-auth-theme-switcher__btn:first-child { border-radius: 999px 0 0 999px; }
+  .fms-auth-theme-switcher__btn:last-child  { border-radius: 0 999px 999px 0; }
+
+  .fms-auth-theme-switcher .ti { font-size: 1rem; line-height: 1; }
+</style>
+
+<script>
+  (function () {
+    var lightBtn = document.getElementById('switcher-light-theme');
+    var darkBtn  = document.getElementById('switcher-dark-theme');
+    if (!lightBtn || !darkBtn) return;
+
+    function isDark() {
+      return document.documentElement.getAttribute('data-theme-mode') === 'dark';
+    }
+
+    function syncToggle() {
+      if (isDark()) {
+        lightBtn.classList.remove('d-none');
+        darkBtn.classList.add('d-none');
+      } else {
+        lightBtn.classList.add('d-none');
+        darkBtn.classList.remove('d-none');
+      }
+    }
+
+    function toggleTheme() {
+      /* Toggle: current state dibalik */
+      var next = isDark() ? 'light' : 'dark';
+      if (window.FMSTheme && typeof window.FMSTheme.setPreference === 'function') {
+        window.FMSTheme.setPreference(next);
+      } else {
+        document.documentElement.setAttribute('data-theme-mode', next);
+      }
+      syncToggle();
+      if (typeof switcherClick === 'function') switcherClick();
+    }
+
+    lightBtn.addEventListener('click', toggleTheme);
+    darkBtn.addEventListener('click', toggleTheme);
+
+    /* Sync initial state after DOM + FMSTheme.apply() from head.php */
+    syncToggle();
+  }());
+</script>
+
 <div class="row authentication authentication-cover-main mx-0">
   <div class="col-xxl-9 col-xl-9">
     <div class="row justify-content-center align-items-center h-100">
@@ -14,6 +130,12 @@
               class="alert d-none"
               role="alert"
               aria-live="polite"></div>
+
+            <?php if (session()->getFlashdata('logout_success')): ?>
+              <div class="alert alert-success" role="alert">
+                <?php echo esc((string) session()->getFlashdata('logout_success')) ?>
+              </div>
+            <?php endif; ?>
 
             <?php if (session()->getFlashdata('login_success')): ?>
               <div class="alert alert-success" role="alert">

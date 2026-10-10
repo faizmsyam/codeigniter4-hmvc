@@ -27,8 +27,6 @@
       </div>
       <!-- End::header-element -->
 
-      <!-- <div id="live-clock"></div> -->
-
       <div class="header-element header-search header-search-content d-md-block d-none">
         <!-- Start::header-link -->
         <input type="text" class="header-search-bar form-control bg-white" id="header-search" placeholder="Search ..." spellcheck="false" autocomplete="off" autocapitalize="off">
@@ -44,6 +42,15 @@
 
     <!-- Start::header-content-right -->
     <ul class="header-content-right">
+      <li class="header-element fms-header-clock-wrap d-none d-xl-flex">
+        <div id="live-clock" class="fms-header-clock" aria-live="off">
+          <span class="fms-header-clock-icon"><i class="ri-time-line"></i></span>
+          <span class="fms-header-clock-copy">
+            <span class="live-clock-date"></span>
+            <span class="live-clock-time"></span>
+          </span>
+        </div>
+      </li>
       <!-- Start::header-element -->
       <li class="header-element d-md-none d-block">
         <a href="javascript:void(0);" class="header-link" data-bs-toggle="modal" data-bs-target="#header-responsive-search">
@@ -241,24 +248,27 @@
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     const clockEl = document.getElementById("live-clock");
-    if (!clockEl) return;
+    const clockDate = clockEl ? clockEl.querySelector(".live-clock-date") : null;
+    const clockTime = clockEl ? clockEl.querySelector(".live-clock-time") : null;
+    if (!clockDate || !clockTime) return;
 
     const hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
     const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
     function updateClock() {
       const now = new Date();
+      const time = [now.getHours(), now.getMinutes(), now.getSeconds()]
+        .map(function(value) { return String(value).padStart(2, "0"); })
+        .join(":");
 
-      clockEl.innerHTML =
-        `
-       ${hari[now.getDay()]}, ${now.getDate()} ${bulan[now.getMonth()]} ${now.getFullYear()}
-       ${String(now.getHours()).padStart(2,"0")} :
-       ${String(now.getMinutes()).padStart(2,"0")} :
-       ${String(now.getSeconds()).padStart(2,"0")} WIB
-      `;
+      clockDate.textContent = `${hari[now.getDay()]}, ${now.getDate()} ${bulan[now.getMonth()]} ${now.getFullYear()}`;
+      clockTime.textContent = `${time} WIB`;
     }
 
     updateClock();
-    setInterval(updateClock, 1000);
+    const clockTimer = window.setInterval(updateClock, 1000);
+    window.addEventListener("beforeunload", function() {
+      window.clearInterval(clockTimer);
+    }, { once: true });
   });
 </script>

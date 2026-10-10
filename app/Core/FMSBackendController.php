@@ -42,9 +42,7 @@ class FMSBackendController extends FMSController
         $breadcrumbs = $this->buildBreadcrumb();
         $lastBreadcrumb = $breadcrumbs === [] ? null : end($breadcrumbs);
         $pageTitle = is_object($lastBreadcrumb) ? ($lastBreadcrumb->name ?? 'App') : $this->fallbackPageTitle();
-        if (($this->meta['title'] ?? '') === '') {
-            $this->fmsMeta(['title' => $pageTitle]);
-        }
+        $this->fmsMeta(['title' => $pageTitle]);
         $backendUser = [
             'id' => $userIdentifier,
             'uuid' => (string) $this->session->get('fms_backend_user_uuid'),

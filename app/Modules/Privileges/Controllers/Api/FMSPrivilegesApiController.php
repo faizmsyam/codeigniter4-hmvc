@@ -51,14 +51,13 @@ final class FMSPrivilegesApiController extends FMSApiController
 
         $pageNumber = max(1, (int) ($this->request->getGet('page') ?? 1));
         $pageSize = min(100, max(1, (int) ($this->request->getGet('per_page') ?? 25)));
+        $result = $this->managementRepository->paginateGroups($pageNumber, $pageSize, [
+            'search'                      => trim((string) ($this->request->getGet('search') ?? '')),
+            'include_deleted'             => $this->request->getGet('include_deleted') === '1',
+            'exclude_super_administrator' => ! $this->subjectIsSuperAdministrator($authenticatedSubject),
+        ]);
 
-        return $this->respondSuccess(200,
-            'Daftar group berhasil dimuat.',
-            $this->managementRepository->paginateGroups($pageNumber, $pageSize, [
-                'search'          => trim((string) ($this->request->getGet('search') ?? '')),
-                'include_deleted' => $this->request->getGet('include_deleted') === '1',
-            ]),
-        );
+        return $this->respondSuccess(200, 'Daftar group berhasil dimuat.', $result);
     }
 
     public function group(string $groupUuid): ResponseInterface
@@ -373,21 +372,26 @@ final class FMSPrivilegesApiController extends FMSApiController
 
     public function overviewWithHashes(): ResponseInterface
     {
-        if ($this->authorizedSubject('privileges.manage') === null) {
+        $authenticatedSubject = $this->authorizedSubject('privileges.manage');
+        if ($authenticatedSubject === null) {
             return $this->forbiddenResponse();
         }
 
+        $isSuperAdministrator = $this->subjectIsSuperAdministrator($authenticatedSubject);
         $repository = new FMSDatabasePrivilegesManagementRepository();
-        $menuRows = (new FMSAdminMenuModel())->findAllOrdered();
+        $menuRows = array_values(array_filter(
+            (new FMSAdminMenuModel())->findAllOrdered(),
+            static fn (array $row): bool => trim((string) ($row['url'] ?? '')) !== 'settings',
+        ));
         $menuIdentifiers = array_map(static fn (array $row): int => (int) $row['id'], $menuRows);
         $menuPermissionRows = $repository->menuPermissionMappingsForMenus($menuIdentifiers);
-        $overviewGroups = array_values(array_filter(
-            $repository->paginateGroups(1, 100)['items'],
-            static fn (array $row): bool => mb_strtolower(trim((string) ($row['name'] ?? '')), 'UTF-8') !== 'super administrator',
-        ));
+        $overviewGroups = $repository->paginateGroups(1, 100, [
+            'exclude_super_administrator' => ! $isSuperAdministrator,
+        ])['items'];
         $overviewPermissions = array_values(array_filter(
             $repository->paginatePermissions(1, 100)['items'],
-            static fn (array $row): bool => trim((string) ($row['permission_key'] ?? '')) !== '*',
+            static fn (array $row): bool => trim((string) ($row['permission_key'] ?? '')) !== '*'
+                && trim((string) ($row['module_name'] ?? '')) !== 'settings',
         ));
         return $this->respondSuccess(200, 'Data privileges berhasil dimuat.', [
             'groups' => array_map(fn (array $row): array => $this->withRowHash($row), $overviewGroups),

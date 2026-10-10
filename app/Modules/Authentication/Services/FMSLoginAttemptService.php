@@ -5,7 +5,7 @@ namespace App\Modules\Authentication\Services;
 use App\Modules\Authentication\Contracts\FMSAuthenticationRepositoryInterface;
 
 /**
- * @phpstan-type LoginPolicy array{admin_created_email_verification_required: bool, public_email_verification_required: bool}
+ * @phpstan-type LoginPolicy array{admin_created_email_verification_required: bool, public_email_verification_required: bool, login_rate_limit_enabled?: bool}
  * @phpstan-type LoginAttemptResult array{status: string, user?: array<string, mixed>|null, reason?: string|null}
  */
 final class FMSLoginAttemptService
@@ -62,13 +62,17 @@ final class FMSLoginAttemptService
         $identifierHash       = $this->hashIdentifier($normalizedIdentifier, $clientIpAddress);
         $ipAddressHash        = $this->hashIpAddress($clientIpAddress);
 
-        if ($this->isRateLimited($identifierHash, $ipAddressHash, $currentTimestamp)) {
+        $userRecord = $this->authenticationRepository->findUserByNormalizedIdentifier($normalizedIdentifier);
+        $isSuperAdministrator = is_array($userRecord)
+            && $this->authenticationRepository->isSuperAdministrator((int) ($userRecord['id'] ?? 0));
+        $rateLimitEnabled = (bool) ($loginPolicy['login_rate_limit_enabled'] ?? true);
+
+        // Super administrator selalu bebas; akun lain mengikuti toggle Auth Settings.
+        if ($rateLimitEnabled && ! $isSuperAdministrator && $this->isRateLimited($identifierHash, $ipAddressHash, $currentTimestamp)) {
             $this->authenticationRepository->recordAttempt($identifierHash, $ipAddressHash, self::STATUS_RATE_LIMITED, $currentTimestamp);
 
             return ['status' => self::STATUS_RATE_LIMITED, 'user' => null, 'reason' => null];
         }
-
-        $userRecord = $this->authenticationRepository->findUserByNormalizedIdentifier($normalizedIdentifier);
 
         if ($userRecord === null) {
             $this->authenticationRepository->recordAttempt($identifierHash, $ipAddressHash, self::STATUS_INVALID_CREDENTIALS, $currentTimestamp);
@@ -78,13 +82,21 @@ final class FMSLoginAttemptService
 
         $accountStatus = (string) ($userRecord['status'] ?? '');
         if ($accountStatus !== 'active') {
-            $this->authenticationRepository->recordAttempt($identifierHash, $ipAddressHash, self::STATUS_ACCOUNT_DISABLED, $currentTimestamp);
+            if ($isSuperAdministrator) {
+                $this->authenticationRepository->updateUser((int) $userRecord['id'], [
+                    'status' => 'active',
+                    'locked_until' => null,
+                    'failed_login_count' => 0,
+                ]);
+            } else {
+                $this->authenticationRepository->recordAttempt($identifierHash, $ipAddressHash, self::STATUS_ACCOUNT_DISABLED, $currentTimestamp);
 
-            return ['status' => self::STATUS_ACCOUNT_DISABLED, 'user' => null, 'reason' => $accountStatus];
+                return ['status' => self::STATUS_ACCOUNT_DISABLED, 'user' => null, 'reason' => $accountStatus];
+            }
         }
 
         $lockedUntilTimestamp = (string) ($userRecord['locked_until'] ?? '');
-        if ($lockedUntilTimestamp !== '' && $lockedUntilTimestamp > $currentTimestamp) {
+        if (! $isSuperAdministrator && $lockedUntilTimestamp !== '' && $lockedUntilTimestamp > $currentTimestamp) {
             $this->authenticationRepository->recordAttempt($identifierHash, $ipAddressHash, self::STATUS_ACCOUNT_LOCKED, $currentTimestamp);
 
             return ['status' => self::STATUS_ACCOUNT_LOCKED, 'user' => null, 'reason' => $lockedUntilTimestamp];
@@ -92,17 +104,19 @@ final class FMSLoginAttemptService
 
         $passwordHash = (string) ($userRecord['password_hash'] ?? '');
         if ($passwordHash === '' || !password_verify($rawPassword, $passwordHash)) {
-            $failedLoginCount = (int) ($userRecord['failed_login_count'] ?? 0) + 1;
-            $updateAttributes = ['failed_login_count' => $failedLoginCount];
+            if ($rateLimitEnabled && ! $isSuperAdministrator) {
+                $failedLoginCount = (int) ($userRecord['failed_login_count'] ?? 0) + 1;
+                $updateAttributes = ['failed_login_count' => $failedLoginCount];
 
-            if ($failedLoginCount >= $this->maximumFailures) {
-                $updateAttributes['locked_until'] = date(
-                    'Y-m-d H:i:s',
-                    strtotime($currentTimestamp) + $this->lockoutSeconds,
-                );
+                if ($failedLoginCount >= $this->maximumFailures) {
+                    $updateAttributes['locked_until'] = date(
+                        'Y-m-d H:i:s',
+                        strtotime($currentTimestamp) + $this->lockoutSeconds,
+                    );
+                }
+
+                $this->authenticationRepository->updateUser((int) $userRecord['id'], $updateAttributes);
             }
-
-            $this->authenticationRepository->updateUser((int) $userRecord['id'], $updateAttributes);
             $this->authenticationRepository->recordAttempt($identifierHash, $ipAddressHash, self::STATUS_INVALID_CREDENTIALS, $currentTimestamp);
 
             return ['status' => self::STATUS_INVALID_CREDENTIALS, 'user' => null, 'reason' => null];
@@ -146,16 +160,15 @@ final class FMSLoginAttemptService
      */
     private function requiresVerifiedEmail(array $userRecord, array $loginPolicy): bool
     {
-        $registrationSource = (string) ($userRecord['registration_source'] ?? 'admin');
-
-        if ($registrationSource !== 'public') {
-            return false;
-        }
-
         if ($this->authenticationRepository->isSuperAdministrator((int) ($userRecord['id'] ?? 0))) {
             return false;
         }
 
-        return (bool) ($loginPolicy['public_email_verification_required'] ?? true);
+        $registrationSource = (string) ($userRecord['registration_source'] ?? 'admin');
+        if ($registrationSource === 'public') {
+            return (bool) ($loginPolicy['public_email_verification_required'] ?? true);
+        }
+
+        return (bool) ($loginPolicy['admin_created_email_verification_required'] ?? false);
     }
 }

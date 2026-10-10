@@ -15,6 +15,7 @@ use App\Modules\Authentication\Repositories\FMSDatabaseRefreshTokenRepository;
 use App\Modules\Authentication\Services\FMSBackendAuthenticationService;
 use App\Modules\Authentication\Services\FMSRefreshTokenService;
 use App\Modules\Authentication\Services\FMSLoginAttemptService;
+use App\Modules\Authentication\Services\FMSUserSessionService;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
@@ -52,17 +53,49 @@ final class FMSAuthenticationApiController extends FMSApiController
 
             $backendSession = session();
             $backendSession->regenerate(true);
-            $backendSession->set($authenticationResult['session']);
+            $sessionData = $authenticationResult['session'];
+            $sessionData['fms_backend_token_family_id'] = (string) ($authenticationResult['tokens']['token_family_id'] ?? '');
+            $backendSession->set($sessionData);
             $backendSession->remove('fms_backend_intended_url');
 
+            $currentTimestamp = date('Y-m-d H:i:s');
+            (new FMSUserSessionService())->touchFamily(
+                (string) ($authenticationResult['tokens']['token_family_id'] ?? ''),
+                $currentTimestamp,
+                date('Y-m-d H:i:s', time() + config(\Config\Session::class)->expiration),
+            );
+
             $csrfToken = $this->issueRefreshCookie($authenticationResult['tokens']['presented_refresh_token']);
+
+            // ── Must-change-password gate ─────────────────────────────────
+            // User flag records "password masih password awal admin".
+            // Global auth setting decides whether that flag is enforced at login.
+            $userRecord = $authenticationResult['user'] ?? [];
+            $authSettings = db_connect()
+                ->table('c_auth_settings')
+                ->orderBy('id', 'DESC')
+                ->get(1)
+                ->getRowArray() ?? [];
+            $mustChangePassword = ! empty($userRecord['must_change_password'])
+                && ! empty($authSettings['admin_must_change_password']);
+
+            $redirectUrl = $mustChangePassword
+                ? site_url(ROUTE_ADMIN . '/change-password')
+                : site_url(ROUTE_ADMIN . '/dashboard');
+
+            if ($mustChangePassword) {
+                $backendSession->set('fms_backend_must_change_password', true);
+            } else {
+                $backendSession->remove('fms_backend_must_change_password');
+            }
 
             return $this->respondSuccess(200, 'Autentikasi berhasil.', [
                 'access_token' => $authenticationResult['tokens']['access_token'],
                 'token_type' => $authenticationResult['tokens']['token_type'],
                 'expires_in' => $authenticationResult['tokens']['expires_in'],
                 'csrf_token' => $csrfToken,
-                'redirect_url' => site_url(ROUTE_ADMIN . '/dashboard'),
+                'must_change_password' => $mustChangePassword,
+                'redirect_url' => $redirectUrl,
             ]);
         } catch (Throwable $exception) {
             log_message('error', 'Authentication login failed: {message}', ['message' => $exception->getMessage()]);
@@ -75,7 +108,9 @@ final class FMSAuthenticationApiController extends FMSApiController
     {
         $presentedRefreshToken = $this->resolvePresentedRefreshToken();
         if ($presentedRefreshToken === null) {
-            return $this->respondValidationError(['refresh_token' => ['Refresh token wajib diisi.']]);
+            $this->clearBackendAuthenticationSession();
+
+            return $this->respondError(401, 'Refresh token tidak valid.', null, 401);
         }
 
         try {
@@ -92,7 +127,7 @@ final class FMSAuthenticationApiController extends FMSApiController
             );
 
             if ($rotationResult['status'] !== FMSRefreshTokenService::STATUS_ROTATED || ! is_array($rotationResult['user'] ?? null)) {
-                $this->clearRefreshCookie();
+                $this->clearBackendAuthenticationSession();
 
                 return $this->respondError(401, 'Refresh token tidak valid.', null, 401);
             }
@@ -106,6 +141,15 @@ final class FMSAuthenticationApiController extends FMSApiController
                 $permissionClaims->claims((int) $userRecord['id'], $permissionCodes),
             );
             $this->issueRefreshCookie($rotationResult['selector'] . '.' . $rotationResult['validator']);
+            (new FMSUserSessionService())->touchOrCreate(
+                (int) $userRecord['id'],
+                (string) $rotationResult['token_family_id'],
+                $this->refreshDeviceLabel(),
+                hash('sha256', $this->request->getIPAddress()),
+                hash('sha256', $this->request->getUserAgent()->getAgentString()),
+                date('Y-m-d H:i:s'),
+                date('Y-m-d H:i:s', time() + config(FMSJwt::class)->refreshTokenTtlSeconds),
+            );
             $csrfHeaderValue = trim((string) $this->request->getHeaderLine(
                 $this->refreshCookieConfiguration()->csrfHeaderName,
             ));
@@ -138,6 +182,7 @@ final class FMSAuthenticationApiController extends FMSApiController
                 $storedToken = $refreshTokenModel->where('selector', $parsedToken['selector'])->first();
                 if (is_array($storedToken)) {
                     (new FMSDatabaseRefreshTokenRepository())->revokeFamily((string) $storedToken['token_family_id'], date('Y-m-d H:i:s'));
+                    (new FMSUserSessionService())->revokeFamily((string) $storedToken['token_family_id'], date('Y-m-d H:i:s'));
                 }
             }
         }
@@ -163,6 +208,130 @@ final class FMSAuthenticationApiController extends FMSApiController
         $backendSession->regenerate(true);
 
         return $this->respondSuccess(200, 'Sesi berhasil diakhiri.');
+    }
+
+    public function sessionStatus(): ResponseInterface
+    {
+        $backendSession = session();
+        $userIdentifier = (int) $backendSession->get('fms_backend_user_id');
+        $tokenFamilyIdentifier = trim((string) $backendSession->get('fms_backend_token_family_id'));
+        if ($backendSession->get('fms_backend_authenticated') !== true
+            || $userIdentifier <= 0
+            || $tokenFamilyIdentifier === '') {
+            return $this->respondError(401, 'Sesi telah berakhir.', ['active' => false], 401);
+        }
+
+        $currentTimestamp = date('Y-m-d H:i:s');
+
+        // Primary: t_user_sessions — indexed on (user_id, token_family_id, revoked_at, expires_at, id DESC)
+        $sessionRow = db_connect()
+            ->table('t_user_sessions')
+            ->select('expires_at, revoked_at')
+            ->where('user_id', $userIdentifier)
+            ->where('token_family_id', $tokenFamilyIdentifier)
+            ->where('revoked_at', null)
+            ->where('expires_at >', $currentTimestamp)
+            ->orderBy('id', 'DESC')
+            ->get(1)
+            ->getRowArray();
+
+        // Fallback: t_api_refresh_tokens — indexed on (user_id, token_family_id, used_at, revoked_at)
+        if (! is_array($sessionRow)) {
+            $refreshTokenRow = db_connect()
+                ->table('t_api_refresh_tokens')
+                ->select('revoked_at, expires_at')
+                ->where('user_id', $userIdentifier)
+                ->where('token_family_id', $tokenFamilyIdentifier)
+                ->where('used_at', null)
+                ->where('revoked_at', null)
+                ->where('expires_at >', $currentTimestamp)
+                ->orderBy('id', 'DESC')
+                ->get(1)
+                ->getRowArray();
+
+            if (is_array($refreshTokenRow)) {
+                $backendLoginTimestamp = (int) $backendSession->get('fms_backend_logged_in_at');
+                $sessionRow = [
+                    'revoked_at' => null,
+                    'expires_at' => date('Y-m-d H:i:s', $backendLoginTimestamp + config(\Config\Session::class)->expiration),
+                ];
+            }
+        }
+
+        if (! is_array($sessionRow)
+            || ! empty($sessionRow['revoked_at'])
+            || (string) ($sessionRow['expires_at'] ?? '') <= $currentTimestamp) {
+            foreach (array_keys($backendSession->get()) as $sessionKey) {
+                if (str_starts_with((string) $sessionKey, 'fms_backend_')) {
+                    $backendSession->remove((string) $sessionKey);
+                }
+            }
+            $backendSession->regenerate(true);
+            $this->clearRefreshCookie();
+
+            return $this->respondError(401, 'Sesi telah berakhir.', ['active' => false], 401);
+        }
+
+        $expiresAt = (string) $sessionRow['expires_at'];
+
+        return $this->respondSuccess(200, 'Status sesi berhasil dimuat.', [
+            'active'            => true,
+            'expires_at'        => $expiresAt,
+            'remaining_seconds' => max(0, strtotime($expiresAt) - time()),
+        ]);
+    }
+
+    public function continueSession(): ResponseInterface
+    {
+        $backendSession = session();
+        $userIdentifier = (int) $backendSession->get('fms_backend_user_id');
+        $tokenFamilyIdentifier = trim((string) $backendSession->get('fms_backend_token_family_id'));
+        if ($backendSession->get('fms_backend_authenticated') !== true
+            || $userIdentifier <= 0
+            || $tokenFamilyIdentifier === '') {
+            return $this->respondError(401, 'Sesi telah berakhir.', ['active' => false], 401);
+        }
+
+        $database = db_connect();
+        $currentTimestamp = date('Y-m-d H:i:s');
+        $activeSession = $database
+            ->table('t_user_sessions')
+            ->where('user_id', $userIdentifier)
+            ->where('token_family_id', $tokenFamilyIdentifier)
+            ->where('revoked_at', null)
+            ->where('expires_at >', $currentTimestamp)
+            ->countAllResults() > 0;
+        if (! $activeSession) {
+            $activeSession = $database
+                ->table('t_api_refresh_tokens')
+                ->where('user_id', $userIdentifier)
+                ->where('token_family_id', $tokenFamilyIdentifier)
+                ->where('used_at', null)
+                ->where('revoked_at', null)
+                ->where('expires_at >', $currentTimestamp)
+                ->countAllResults() > 0;
+        }
+        if (! $activeSession) {
+            return $this->respondError(401, 'Sesi telah berakhir.', ['active' => false], 401);
+        }
+
+        $expiresAt = date('Y-m-d H:i:s', time() + config(\Config\Session::class)->expiration);
+        (new FMSUserSessionService())->touchOrCreate(
+            $userIdentifier,
+            $tokenFamilyIdentifier,
+            $this->request->getUserAgent()->getAgentString(),
+            hash('sha256', $this->request->getIPAddress()),
+            hash('sha256', $this->request->getUserAgent()->getAgentString()),
+            $currentTimestamp,
+            $expiresAt,
+        );
+        $backendSession->set('fms_backend_logged_in_at', time());
+
+        return $this->respondSuccess(200, 'Sesi berhasil dilanjutkan.', [
+            'active'            => true,
+            'expires_at'        => $expiresAt,
+            'remaining_seconds' => config(\Config\Session::class)->expiration,
+        ]);
     }
 
     public function me(): ResponseInterface
@@ -198,7 +367,7 @@ final class FMSAuthenticationApiController extends FMSApiController
         $settings = db_connect()->table('c_auth_settings')->orderBy('id', 'DESC')->get(1)->getRowArray() ?? [];
 
         return [
-            'admin_created_email_verification_required' => (bool) ($settings['admin_created_email_verification_required'] ?? true),
+            'admin_created_email_verification_required' => (bool) ($settings['admin_created_email_verification_required'] ?? false),
             'public_email_verification_required' => (bool) ($settings['public_email_verification_required'] ?? true),
         ];
     }
@@ -269,5 +438,17 @@ final class FMSAuthenticationApiController extends FMSApiController
         $cookieConfiguration = $this->refreshCookieConfiguration();
         $this->response->deleteCookie($cookieConfiguration->refreshCookieName);
         $this->response->deleteCookie($cookieConfiguration->csrfCookieName);
+    }
+
+    private function clearBackendAuthenticationSession(): void
+    {
+        $backendSession = session();
+        foreach (array_keys($backendSession->get()) as $sessionKey) {
+            if (str_starts_with((string) $sessionKey, 'fms_backend_')) {
+                $backendSession->remove((string) $sessionKey);
+            }
+        }
+        $backendSession->regenerate(true);
+        $this->clearRefreshCookie();
     }
 }

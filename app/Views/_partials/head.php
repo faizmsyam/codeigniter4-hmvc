@@ -27,6 +27,13 @@ $fmsPrimaryHex = '#' . implode('', array_map(
   <meta name="signature" content="<?php echo esc($meta['signature'] ?? '') ?>">
   <meta name="theme-color" content="<?php echo esc($fmsPrimaryHex) ?>" id="fmsThemeColorMeta">
   <meta name="fms-primary-rgb" content="<?php echo esc($fmsPrimaryRgb) ?>">
+  <meta name="fms-base-url" content="<?php echo esc(rtrim(base_url(), '/') . '/', 'attr') ?>">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="<?php echo esc((string) (($appBrand['name'] ?? '') ?: 'FMS App Starter')) ?>">
+  <link rel="manifest" href="<?php echo esc(site_url('manifest.webmanifest'), 'attr') ?>">
+  <link rel="apple-touch-icon" sizes="192x192" href="<?php echo esc(site_url('brand/pwa-icon/192'), 'attr') ?>">
 
   <meta property="og:title" content="<?php echo esc($meta['title'] ?? '') ?>">
   <meta property="og:description" content="<?php echo esc($meta['description'] ?? '') ?>">

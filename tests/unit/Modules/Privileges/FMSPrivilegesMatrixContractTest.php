@@ -47,6 +47,16 @@ final class FMSPrivilegesMatrixContractTest extends CIUnitTestCase
         $this->assertStringContainsString('menu_permissions', $viewSource);
         $this->assertStringContainsString('js-menu-access', $viewSource);
         $this->assertStringContainsString('js-action-permission', $viewSource);
+        $this->assertStringContainsString('var priorities = { create: 1, update: 2, delete: 3 };', $viewSource);
+        $this->assertStringContainsString("document.querySelectorAll('.js-menu-access, .js-action-permission')", $viewSource);
+        $this->assertStringContainsString('setAllFeatures(true)', $viewSource);
+        $this->assertStringContainsString('setAllFeatures(false)', $viewSource);
+        $this->assertStringContainsString("'exclude_super_administrator'", (string) file_get_contents(
+            APPPATH . 'Modules/Privileges/Controllers/Api/FMSPrivilegesApiController.php',
+        ));
+        $this->assertStringContainsString('btn btn-primary btn-glare btn-wave label-btn', $viewSource);
+        $this->assertStringContainsString('ri-save-line label-btn-icon', $viewSource);
+        $this->assertStringContainsString('Menyimpan...', $viewSource);
 
         foreach (['moduleFromMenu', 'permissionFor(menu', 'actionFromPermission', 'js-toggle-column'] as $removedFragment) {
             $this->assertStringNotContainsString($removedFragment, $viewSource);
@@ -66,6 +76,28 @@ final class FMSPrivilegesMatrixContractTest extends CIUnitTestCase
         );
     }
 
+    public function testPermissionButtonOrderPrioritizesCreateUpdateDelete(): void
+    {
+        $repositorySource = (string) file_get_contents(
+            APPPATH . 'Modules/Privileges/Repositories/FMSDatabasePrivilegesManagementRepository.php',
+        );
+
+        $this->assertStringContainsString("CASE action_name WHEN 'create' THEN 1", $repositorySource);
+        $this->assertStringContainsString("WHEN 'update' THEN 2", $repositorySource);
+        $this->assertStringContainsString("WHEN 'delete' THEN 3", $repositorySource);
+        $this->assertStringContainsString('ELSE 4 END', $repositorySource);
+    }
+
+    public function testSettingsMenuIsNotAssignableFromPermissionMatrix(): void
+    {
+        $controllerSource = (string) file_get_contents(
+            APPPATH . 'Modules/Privileges/Controllers/Api/FMSPrivilegesApiController.php',
+        );
+
+        $this->assertStringContainsString("trim((string) (\$row['url'] ?? '')) !== 'settings'", $controllerSource);
+        $this->assertStringContainsString("trim((string) (\$row['module_name'] ?? '')) !== 'settings'", $controllerSource);
+    }
+
     public function testOperationPermissionCatalogueIncludesExplicitMenuRequirements(): void
     {
         $seederSource = (string) file_get_contents(
@@ -83,5 +115,15 @@ final class FMSPrivilegesMatrixContractTest extends CIUnitTestCase
         /* Pemetaan eksplisit menu → modul & aturan is_system */
         $this->assertStringContainsString('MENU_MODULE_MAP', $seederSource);
         $this->assertStringContainsString('SYSTEM_GATE_ACTIONS', $seederSource);
+
+        $controllerSource = (string) file_get_contents(
+            APPPATH . 'Modules/Privileges/Controllers/Api/FMSPrivilegesApiController.php',
+        );
+        $this->assertStringContainsString('$isSuperAdministrator = $this->subjectIsSuperAdministrator($authenticatedSubject)', $controllerSource);
+        $this->assertStringContainsString("'exclude_super_administrator'", $controllerSource);
+        $this->assertStringContainsString("'exclude_super_administrator'", (string) file_get_contents(
+            APPPATH . 'Modules/Privileges/Repositories/FMSDatabasePrivilegesManagementRepository.php',
+        ));
+        $this->assertStringContainsString("permission_key'] ?? '')) !== '*'", $controllerSource);
     }
 }

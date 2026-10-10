@@ -25,9 +25,17 @@ final class FMSUserGroupService
     /**
      * @return array{items: list<array>, summary: array, pagination: array}
      */
-    public function listGroups(int $page = 1, int $perPage = 10, string $search = '', string $status = ''): array
-    {
+    public function listGroups(
+        int $page = 1,
+        int $perPage = 10,
+        string $search = '',
+        string $status = '',
+        bool $includeSuperAdministrator = true,
+    ): array {
         $builder = $this->model->builder();
+        if (! $includeSuperAdministrator) {
+            $builder->where('id !=', 1);
+        }
 
         if ($search !== '') {
             $builder->like('name', $search);
@@ -78,7 +86,11 @@ final class FMSUserGroupService
         ], $items);
 
         /* Summary satu query, bukan tiga COUNT terpisah. */
-        $summaryRow = $db->table('c_group_users')
+        $summaryBuilder = $db->table('c_group_users');
+        if (! $includeSuperAdministrator) {
+            $summaryBuilder->where('id !=', 1);
+        }
+        $summaryRow = $summaryBuilder
             ->select("SUM(CASE WHEN deleted_at IS NULL AND is_active = 1 THEN 1 ELSE 0 END) AS active_count, SUM(CASE WHEN deleted_at IS NULL AND is_active = 0 THEN 1 ELSE 0 END) AS inactive_count, SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS deleted_count", false)
             ->get()
             ->getRowArray() ?? [];

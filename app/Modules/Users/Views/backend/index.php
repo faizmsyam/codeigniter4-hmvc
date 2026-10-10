@@ -41,6 +41,7 @@ $baseUrl = site_url('api/v1/users');
             <option value="active">Aktif</option>
             <option value="inactive">Nonaktif</option>
             <option value="banned">Diblokir</option>
+            <option value="deleted">Dihapus</option>
           </select>
         </div>
       </div>
@@ -95,36 +96,36 @@ $baseUrl = site_url('api/v1/users');
       <form id="userForm" autocomplete="off">
         <input type="hidden" id="userUuid">
         <div class="modal-body">
-          <div id="userFormError" class="alert alert-danger py-2 mb-3 d-none"></div>
+          <div id="userFormError" class="alert alert-danger py-2 mb-3 d-none" data-fms-form-error></div>
 
           <div class="mb-3">
             <label class="form-label fw-semibold" for="userName">Username <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="userName" maxlength="50" placeholder="Contoh: faizmsyam" required>
+            <input type="text" class="form-control" id="userName" name="username" maxlength="50" placeholder="Contoh: faizmsyam" required>
             <div class="invalid-feedback" id="userNameErr"></div>
           </div>
 
           <div class="mb-3">
             <label class="form-label fw-semibold" for="userFullName">Nama Lengkap <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="userFullName" maxlength="100" placeholder="Nama lengkap" required>
+            <input type="text" class="form-control" id="userFullName" name="full_name" maxlength="100" placeholder="Nama lengkap" required>
             <div class="invalid-feedback" id="userFullNameErr"></div>
           </div>
 
           <div class="mb-3">
             <label class="form-label fw-semibold" for="userEmail">Email</label>
-            <input type="email" class="form-control" id="userEmail" maxlength="100" placeholder="nama@domain.com">
+            <input type="email" class="form-control" id="userEmail" name="email" maxlength="100" placeholder="nama@domain.com">
             <div class="invalid-feedback" id="userEmailErr"></div>
           </div>
 
           <div class="mb-3" id="userPasswordGroup">
             <label class="form-label fw-semibold" for="userPassword">Kata Sandi <span class="text-danger">*</span></label>
-            <input type="hidden" class="form-control" id="userPassword" placeholder="Minimal 8 karakter" value="App12345">
+            <input type="hidden" class="form-control" id="userPassword" name="password" placeholder="Minimal 8 karakter" value="App12345">
             <p class="mb-0">Default : <strong>App12345</strong></p>
             <div class="invalid-feedback" id="userPasswordErr"></div>
           </div>
 
           <div class="mb-3">
             <label class="form-label fw-semibold" for="userStatusSelect">Status</label>
-            <select class="form-select" id="userStatusSelect">
+            <select class="form-select" id="userStatusSelect" name="status">
               <option value="active">Aktif</option>
               <option value="inactive">Nonaktif</option>
               <option value="banned">Diblokir</option>
@@ -201,31 +202,6 @@ $baseUrl = site_url('api/v1/users');
   </div>
 </div>
 
-<!-- Modal Hapus Pengguna -->
-<div class="modal fade" id="userDeleteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title text-danger">
-          <i class="ri-delete-bin-line me-1"></i> Hapus Pengguna
-        </h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body pt-2 pb-1">
-        Hapus akun <strong id="userDeleteName" class="text-danger"></strong>?
-        <br><small class="text-muted">Data pengguna akan dinonaktifkan/dihapus secara aman.</small>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-danger btn-sm" id="userDeleteConfirm">
-          <span id="userDeleteBtnText">Hapus</span>
-          <span id="userDeleteBtnSpinner" class="spinner-border spinner-border-sm ms-1 d-none"></span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Modal Sesi Masuk -->
 <div class="modal fade" id="userSessionsModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -273,7 +249,6 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentPerPage = 10;
   let currentSearch = ``;
   let currentStatus = ``;
-  let deleteTarget = null;
   let searchTimer = null;
 
   const tableBody = document.getElementById(`userTableBody`);
@@ -285,7 +260,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const paginEl = document.getElementById(`userPagination`);
 
   const userModal         = new bootstrap.Modal(document.getElementById(`userModal`));
-  const userDeleteModal   = new bootstrap.Modal(document.getElementById(`userDeleteModal`));
   const userPasswordModal = new bootstrap.Modal(document.getElementById(`userPasswordModal`));
   const userGroupsModal   = new bootstrap.Modal(document.getElementById(`userGroupsModal`));
   const userSessionsModal = new bootstrap.Modal(document.getElementById(`userSessionsModal`));
@@ -380,8 +354,11 @@ document.addEventListener('DOMContentLoaded', function() {
       actions.push(`<button type="button" class="btn btn-outline-secondary btn-glare btn-sm ms-1 js-user-groups" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Atur Kelompok"><i class="ri-group-line"></i></button>`);
     }
 
+    const isLocked = u.status === `locked` || (u.locked_until && new Date(u.locked_until.replace(` `, `T`)).getTime() > Date.now());
     if (CAN_UNLOCK && u.status !== `deleted`) {
-      actions.push(`<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-user-unlock" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Buka Akun Terkunci"><i class="ri-lock-unlock-line"></i></button>`);
+      actions.push(isLocked
+        ? `<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-user-unlock" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Buka Kunci Akun"><i class="ri-lock-unlock-line"></i></button>`
+        : `<button type="button" class="btn btn-outline-warning btn-glare btn-sm ms-1 js-user-lock" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Kunci Akun"><i class="ri-lock-line"></i></button>`);
     }
 
     if (CAN_VERIFY_EMAIL && u.status !== `deleted` && !u.is_email_verified) {
@@ -465,9 +442,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function openSessionsModal(uuid, username) {
+    const list = document.getElementById(`userSessionsList`);
     document.getElementById(`userSessionsUsername`).textContent = username;
     document.getElementById(`userSessionsUuid`).value = uuid;
-    document.getElementById(`userSessionsList`).innerHTML = ``;
+    list.innerHTML = `<div class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Memuat sesi...</div>`;
     document.getElementById(`userSessionsEmpty`).classList.add(`d-none`);
     document.getElementById(`userSessionsError`).classList.add(`d-none`);
     userSessionsModal.show();
@@ -486,7 +464,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="fw-medium">${esc(s.device_label || `Perangkat`)}</div>
             <small class="text-muted">Aktif terakhir: ${esc(s.last_activity_at || s.created_at || `-`)}</small>
           </div>
-          <span class="badge bg-${active ? `success` : `secondary`}-transparent">${active ? `Aktif` : `Dicabut`}</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-${active ? `success` : `secondary`}-transparent">${active ? `Aktif` : `Dicabut`}</span>
+            ${active && CAN_REVOKE_SESS ? `<button type="button" class="btn btn-outline-danger btn-sm js-revoke-session" data-session-uuid="${esc(s.session_uuid || ``)}" title="Keluarkan sesi ini"><i class="ri-logout-box-line"></i></button>` : ``}
+          </div>
         </div>`;
       }).join(``);
     }).catch(function(err) {
@@ -528,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById(`userModalLabel`).textContent = `Tambah Pengguna`;
       document.getElementById(`userPasswordGroup`).classList.remove(`d-none`);
       document.getElementById(`userPassword`).required = true;
-      document.getElementById(`userFormError`).classList.add(`d-none`);
+      FMS.form.clearErrors(userForm);
       userModal.show();
     });
   }
@@ -537,16 +518,10 @@ document.addEventListener('DOMContentLoaded', function() {
   userForm.addEventListener(`submit`, function(e) {
     e.preventDefault();
     const uuid = document.getElementById(`userUuid`).value;
-    const payload = {
-      username: document.getElementById(`userName`).value.trim(),
-      email: document.getElementById(`userEmail`).value.trim(),
-      full_name: document.getElementById(`userFullName`).value.trim(),
-      status: document.getElementById(`userStatusSelect`).value,
-    };
+    const payload = FMS.form.values(userForm);
 
-    if (!uuid) {
-      payload.password = document.getElementById(`userPassword`).value;
-    }
+    /* Password hanya dikirim ketika membuat user baru. */
+    if (uuid) delete payload.password;
 
     const btnSave = document.getElementById(`userSaveBtn`);
     const btnText = document.getElementById(`userSaveBtnText`);
@@ -564,9 +539,12 @@ document.addEventListener('DOMContentLoaded', function() {
       FMS.toast(`Data pengguna berhasil disimpan.`, true);
       loadUsers(currentPage);
     }).catch(function(err) {
-      const errBox = document.getElementById(`userFormError`);
-      errBox.textContent = err.message || `Gagal menyimpan pengguna.`;
-      errBox.classList.remove(`d-none`);
+      FMS.form.clearErrors(userForm);
+      if (err && err.errors && Object.keys(err.errors).length) {
+        FMS.form.errors(userForm, err.errors);
+      } else {
+        FMS.toast(err.message || `Gagal menyimpan pengguna.`, false);
+      }
     }).finally(function() {
       btnSave.disabled = false;
       btnText.textContent = `Simpan`;
@@ -591,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById(`userPasswordGroup`).classList.add(`d-none`);
         document.getElementById(`userPassword`).required = false;
         document.getElementById(`userModalLabel`).textContent = `Ubah Pengguna`;
-        document.getElementById(`userFormError`).classList.add(`d-none`);
+        FMS.form.clearErrors(userForm);
         userModal.show();
       }).catch(function(err) {
         FMS.toast(err.message || `Gagal memuat detail pengguna.`, false);
@@ -632,9 +610,22 @@ document.addEventListener('DOMContentLoaded', function() {
     /* Delete User */
     const btnDel = e.target.closest(`.js-user-delete`);
     if (btnDel) {
-      deleteTarget = { uuid: btnDel.dataset.uuid, name: btnDel.dataset.username };
-      document.getElementById(`userDeleteName`).textContent = deleteTarget.name;
-      userDeleteModal.show();
+      const uuid = btnDel.dataset.uuid;
+      const uname = btnDel.dataset.username;
+      FMS.confirm({
+        title: `Hapus Pengguna`,
+        message: `Hapus akun "${uname}"?`,
+        description: `Data pengguna akan dinonaktifkan/dihapus secara aman.`,
+        confirmLabel: `Hapus`,
+        loadingLabel: `Menghapus...`,
+        variant: `danger`,
+        action: function () {
+          return FMS.del(`${BASE_URL}/${uuid}`).then(function() {
+            FMS.toast(`Pengguna berhasil dihapus.`, true);
+            loadUsers(currentPage);
+          });
+        }
+      });
       return;
     }
 
@@ -644,18 +635,37 @@ document.addEventListener('DOMContentLoaded', function() {
       const uuid = btnRestore.dataset.uuid;
       const uname = btnRestore.dataset.username;
       FMS.confirm({
-        title: 'Pulihkan Pengguna',
+        title: `Pulihkan Pengguna`,
         message: `Pulihkan akun "${uname}"?`,
-        confirmLabel: 'Pulihkan',
-        variant: 'success'
-      }).then(function (ok) {
-        if (!ok) return;
-        FMS.post(`${BASE_URL}/${uuid}/restore`, {}).then(function() {
-          FMS.toast(`Akun berhasil dipulihkan.`, true);
-          loadUsers(currentPage);
-        }).catch(function(err) {
-          FMS.toast(err.message || `Gagal memulihkan akun.`, false);
-        });
+        confirmLabel: `Pulihkan`,
+        loadingLabel: `Memulihkan...`,
+        variant: `success`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${uuid}/restore`, {}).then(function() {
+            FMS.toast(`Akun berhasil dipulihkan.`, true);
+            loadUsers(currentPage);
+          });
+        }
+      });
+      return;
+    }
+
+    /* Lock Akun */
+    const btnLock = e.target.closest(`.js-user-lock`);
+    if (btnLock) {
+      const uname = btnLock.dataset.username;
+      FMS.confirm({
+        title: `Kunci Akun`,
+        message: `Kunci akun "${uname}"?`,
+        confirmLabel: `Kunci`,
+        loadingLabel: `Mengunci...`,
+        variant: `warning`,
+        action: function () {
+          return FMS.patch(`${BASE_URL}/${btnLock.dataset.uuid}/status`, { status: `locked` }).then(function() {
+            FMS.toast(`Akun ${uname} berhasil dikunci.`, true);
+            loadUsers(currentPage);
+          });
+        }
       });
       return;
     }
@@ -665,16 +675,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnUnlock) {
       const uname = btnUnlock.dataset.username;
       FMS.confirm({
-        title: 'Buka Kunci Akun',
+        title: `Buka Kunci Akun`,
         message: `Buka kunci akun "${uname}"?`,
-        confirmLabel: 'Buka Kunci',
-        variant: 'primary'
-      }).then(function (ok) {
-        if (!ok) return;
-        FMS.post(`${BASE_URL}/${btnUnlock.dataset.uuid}/unlock`, {}).then(function() {
-          FMS.toast(`Akun ${uname} berhasil dibuka.`, true);
-          loadUsers(currentPage);
-        }).catch(function(err) { FMS.toast(err.message || `Gagal membuka akun.`, false); });
+        confirmLabel: `Buka Kunci`,
+        loadingLabel: `Membuka...`,
+        variant: `primary`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${btnUnlock.dataset.uuid}/unlock`, {}).then(function() {
+            FMS.toast(`Akun ${uname} berhasil dibuka.`, true);
+            loadUsers(currentPage);
+          });
+        }
       });
       return;
     }
@@ -684,16 +695,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnVerify) {
       const uname = btnVerify.dataset.username;
       FMS.confirm({
-        title: 'Verifikasi Email',
+        title: `Verifikasi Email`,
         message: `Verifikasi email untuk "${uname}"?`,
-        confirmLabel: 'Verifikasi',
-        variant: 'success'
-      }).then(function (ok) {
-        if (!ok) return;
-        FMS.post(`${BASE_URL}/${btnVerify.dataset.uuid}/verify-email`, {}).then(function() {
-          FMS.toast(`Email ${uname} diverifikasi.`, true);
-          loadUsers(currentPage);
-        }).catch(function(err) { FMS.toast(err.message || `Gagal verifikasi email.`, false); });
+        confirmLabel: `Verifikasi`,
+        loadingLabel: `Memverifikasi...`,
+        variant: `success`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${btnVerify.dataset.uuid}/verify-email`, {}).then(function() {
+            FMS.toast(`Email ${uname} diverifikasi.`, true);
+            loadUsers(currentPage);
+          });
+        }
       });
       return;
     }
@@ -703,16 +715,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnUnverify) {
       const uname = btnUnverify.dataset.username;
       FMS.confirm({
-        title: 'Batalkan Verifikasi',
+        title: `Batalkan Verifikasi`,
         message: `Batalkan verifikasi email "${uname}"?`,
-        confirmLabel: 'Batalkan',
-        variant: 'warning'
-      }).then(function (ok) {
-        if (!ok) return;
-        FMS.post(`${BASE_URL}/${btnUnverify.dataset.uuid}/unverify-email`, {}).then(function() {
-          FMS.toast(`Verifikasi email ${uname} dibatalkan.`, true);
-          loadUsers(currentPage);
-        }).catch(function(err) { FMS.toast(err.message || `Gagal batal verifikasi.`, false); });
+        confirmLabel: `Batalkan`,
+        loadingLabel: `Membatalkan...`,
+        variant: `warning`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${btnUnverify.dataset.uuid}/unverify-email`, {}).then(function() {
+            FMS.toast(`Verifikasi email ${uname} dibatalkan.`, true);
+            loadUsers(currentPage);
+          });
+        }
       });
       return;
     }
@@ -722,16 +735,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnRevoke) {
       const uname = btnRevoke.dataset.username;
       FMS.confirm({
-        title: 'Keluarkan dari Perangkat',
+        title: `Keluarkan dari Perangkat`,
         message: `Keluarkan "${uname}" dari semua perangkat?`,
-        confirmLabel: 'Keluarkan',
-        variant: 'danger'
-      }).then(function (ok) {
-        if (!ok) return;
-        FMS.del(`${BASE_URL}/${btnRevoke.dataset.uuid}/sessions`).then(function() {
-          FMS.toast(`Sesi ${uname} dicabut.`, true);
-          loadUsers(currentPage);
-        }).catch(function(err) { FMS.toast(err.message || `Gagal mencabut sesi.`, false); });
+        confirmLabel: `Keluarkan`,
+        loadingLabel: `Mengeluarkan...`,
+        variant: `danger`,
+        action: function () {
+          return FMS.del(`${BASE_URL}/${btnRevoke.dataset.uuid}/sessions`).then(function() {
+            FMS.toast(`Sesi ${uname} dicabut.`, true);
+            loadUsers(currentPage);
+          });
+        }
       });
       return;
     }
@@ -798,11 +812,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const btn = document.getElementById(`btnResetPasswordSubmit`);
 
     btn.disabled = true;
-    FMS.post(`${BASE_URL}/${uuid}/reset-password`, { password: pwd }).then(function() {
-      userPasswordModal.hide();
-      FMS.toast(`Password berhasil direset.`, true);
+    FMS.patch(`${BASE_URL}/${uuid}/reset-password`, payload).then(function() {
+      resetPasswordModal.hide();
+      FMS.toast(`Password ${u.username} berhasil direset.`, true);
     }).catch(function(err) {
-      FMS.toast(err.message || `Gagal mereset password.`, false);
+      const errBox = document.getElementById(`resetPasswordError`);
+      var detailLines = [];
+      if (err && err.errors && typeof err.errors === 'object') {
+        Object.keys(err.errors).forEach(function(field) {
+          var msgs = err.errors[field];
+          if (Array.isArray(msgs)) {
+            msgs.forEach(function(m) { detailLines.push(field + ': ' + m); });
+          } else {
+            detailLines.push(field + ': ' + msgs);
+          }
+        });
+      }
+      errBox.textContent = detailLines.length > 0
+        ? detailLines.join('\n')
+        : (err.message || `Gagal mereset password.`);
+      errBox.classList.remove(`d-none`);
     }).finally(function() {
       btn.disabled = false;
     });
@@ -839,6 +868,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  /* Revoke one session from session modal */
+  document.getElementById(`userSessionsList`).addEventListener(`click`, function(e) {
+    const button = e.target.closest(`.js-revoke-session`);
+    if (!button) return;
+
+    const uuid = document.getElementById(`userSessionsUuid`).value;
+    const sessionUuid = button.dataset.sessionUuid;
+    if (!uuid || !sessionUuid) return;
+
+    button.disabled = true;
+    FMS.del(`${BASE_URL}/${uuid}/sessions`, { session_uuid: sessionUuid }).then(function() {
+      userSessionsModal.hide();
+      FMS.toast(`Sesi perangkat berhasil dicabut.`, true);
+      loadUsers(currentPage);
+    }).catch(function(err) {
+      FMS.toast(err.message || `Gagal mencabut sesi perangkat.`, false);
+      button.disabled = false;
+    });
+  });
+
   /* Revoke All Sessions (dari modal sesi) */
   const btnRevokeAll = document.getElementById(`btnRevokeAllSessions`);
   if (btnRevokeAll) {
@@ -855,33 +904,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }).finally(function() { btnRevokeAll.disabled = false; });
     });
   }
-
-  /* Delete Confirm */
-  document.getElementById(`userDeleteConfirm`).addEventListener(`click`, function() {
-    if (!deleteTarget) return;
-
-    const btn = document.getElementById(`userDeleteConfirm`);
-    const btnText = document.getElementById(`userDeleteBtnText`);
-    const btnSpinner = document.getElementById(`userDeleteBtnSpinner`);
-
-    btn.disabled = true;
-    btnText.textContent = `Menghapus...`;
-    btnSpinner.classList.remove(`d-none`);
-
-    FMS.del(`${BASE_URL}/${deleteTarget.uuid}`).then(function() {
-      userDeleteModal.hide();
-      FMS.toast(`Pengguna berhasil dihapus.`, true);
-      loadUsers(currentPage);
-    }).catch(function(err) {
-      userDeleteModal.hide();
-      FMS.toast(err.message || `Gagal menghapus pengguna.`, false);
-    }).finally(function() {
-      btn.disabled = false;
-      btnText.textContent = `Hapus`;
-      btnSpinner.classList.add(`d-none`);
-      deleteTarget = null;
-    });
-  });
 
   /* Initial Load */
   loadUsers(1);

@@ -128,6 +128,17 @@ final class FMSCMenusSeeder extends Seeder
                 'target_blank' => 0,
                 'created_by'   => 1,
             ],
+            [
+                'id'           => 10,
+                'id_parent'    => 2,
+                'name'         => 'Konfigurasi',
+                'url'          => 'settings',
+                'position'     => 8,
+                'icon'         => 'ph-duotone ph-sliders',
+                'is_active'    => 1,
+                'target_blank' => 0,
+                'created_by'   => 1,
+            ],
         ];
 
         $menuTable->insertBatch($data);

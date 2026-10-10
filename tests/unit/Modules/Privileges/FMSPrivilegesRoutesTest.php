@@ -26,12 +26,13 @@ final class FMSPrivilegesRoutesTest extends CIUnitTestCase
             "[FMSPrivilegesApiController::class, 'deletePermission']",
             "[FMSPrivilegesApiController::class, 'menuPermissions']",
             "[FMSPrivilegesApiController::class, 'replaceMenuPermissions']",
-            "[FMSPrivilegesApiController::class, 'userGroups']",
-            "[FMSPrivilegesApiController::class, 'replaceUserGroups']",
             "'filter' => \$privilegesApiFilter",
         ] as $expectedRouteFragment) {
             $this->assertStringContainsString($expectedRouteFragment, $apiRoutes);
         }
+
+        $this->assertStringNotContainsString("[FMSPrivilegesApiController::class, 'userGroups']", $apiRoutes);
+        $this->assertStringNotContainsString("[FMSPrivilegesApiController::class, 'replaceUserGroups']", $apiRoutes);
     }
 
     public function testOnlyExplicitHttpVerbsAreRegistered(): void

@@ -4,7 +4,11 @@ namespace App\Modules\Users\Controllers\Api;
 
 use App\Core\FMSApiController;
 use App\Filters\FMSRequestContext;
+use App\Modules\Authentication\Repositories\FMSDatabaseAuthenticationLifecycleRepository;
+use App\Modules\Authentication\Services\FMSAuthenticationLifecycleService;
 use App\Modules\Privileges\Repositories\FMSDatabasePrivilegesManagementRepository;
+use App\Modules\Settings\Models\FMSAuthSettingModel;
+use App\Modules\Settings\Services\FMSEmailService;
 use App\Modules\Users\Models\FMSUserModel;
 use App\Modules\Users\Repositories\FMSDatabaseUserRepository;
 use App\Modules\Users\Services\FMSUserAuthorizationService;
@@ -38,11 +42,15 @@ class FMSUsersApiController extends FMSApiController
             return $this->respondError(403, 'Akses ditolak.', null, 403);
         }
 
+        $requestedStatus = trim((string) $this->request->getGet('status'));
         $listingFilters = [
-            'page'     => $this->request->getGet('page'),
-            'per_page' => $this->request->getGet('per_page') ?? $this->request->getGet('perPage'),
-            'search'   => $this->request->getGet('search'),
-            'status'   => $this->request->getGet('status'),
+            'page'            => $this->request->getGet('page'),
+            'per_page'        => $this->request->getGet('per_page') ?? $this->request->getGet('perPage'),
+            'search'          => $this->request->getGet('search'),
+            'status'          => $requestedStatus === 'deleted' ? '' : $requestedStatus,
+            'include_deleted' => $requestedStatus === 'deleted',
+            'deleted_only'    => $requestedStatus === 'deleted',
+            'exclude_programmer_super_admin' => ! $this->userAuthorizationService->isSuperAdministrator($authenticatedSubject),
         ];
 
         try {
@@ -133,6 +141,40 @@ class FMSUsersApiController extends FMSApiController
             return $this->respondValidationError($validationErrors);
         }
 
+        $verificationEmailSent = false;
+        try {
+            $registrationSource = (string) ($requestPayload['registration_source'] ?? 'admin');
+            $authSettings = (new FMSAuthSettingModel())->currentSettings();
+            $verificationRequired = $registrationSource === 'public'
+                ? (bool) ($authSettings['public_email_verification_required'] ?? true)
+                : (bool) ($authSettings['admin_created_email_verification_required'] ?? false);
+
+            if ($verificationRequired) {
+                $verificationResult = (new FMSAuthenticationLifecycleService(new FMSDatabaseAuthenticationLifecycleRepository()))
+                    ->issueVerificationForUser($createdUserIdentifier, date('Y-m-d H:i:s'));
+                $verificationToken = $verificationResult['verification_token'] ?? null;
+                $verificationUser = $verificationResult['user'] ?? null;
+
+                if (is_array($verificationToken) && is_array($verificationUser)) {
+                    $verificationUrl = site_url('fms-auth/verify-email') . '?' . http_build_query([
+                        'selector' => $verificationToken['selector'],
+                        'validator' => $verificationToken['validator'],
+                    ]);
+                    $verificationEmailSent = (new FMSEmailService())->sendVerification(
+                        (string) $verificationUser['email'],
+                        (string) ($verificationUser['full_name'] ?: $verificationUser['username']),
+                        $verificationUrl,
+                        (string) $verificationToken['expires_at'],
+                    );
+                }
+            }
+        } catch (\Throwable $verificationException) {
+            log_message('error', 'Email verification for created user {id} failed: {message}', [
+                'id' => $createdUserIdentifier,
+                'message' => $verificationException->getMessage(),
+            ]);
+        }
+
         \App\Libraries\FMSAuditLogger::record(
             event: 'users.created',
             module: 'users',
@@ -147,7 +189,10 @@ class FMSUsersApiController extends FMSApiController
 
         return $this->respondSuccess(200,
             'User berhasil dibuat.',
-            ['id' => $createdUserIdentifier],
+            [
+                'id' => $createdUserIdentifier,
+                'verification_email_sent' => $verificationEmailSent,
+            ],
             201,
         );
     }
@@ -190,7 +235,18 @@ class FMSUsersApiController extends FMSApiController
 
             $validationErrors = FMSUserValidation::validateUpdate($requestPayload);
             if ($validationErrors === []) {
-                $validationErrors = ['payload' => [$message]];
+                /* Map pesan error ke field yang sesuai agar muncul di form. */
+                if (str_contains($message, 'email')) {
+                    $validationErrors = ['email' => [$message]];
+                } elseif (str_contains($message, 'username')) {
+                    $validationErrors = ['username' => [$message]];
+                } elseif (str_contains($message, 'password')) {
+                    $validationErrors = ['password' => [$message]];
+                } elseif (str_contains($message, 'status')) {
+                    $validationErrors = ['status' => [$message]];
+                } else {
+                    $validationErrors = ['payload' => [$message]];
+                }
             }
 
             return $this->respondValidationError($validationErrors);
@@ -494,24 +550,17 @@ class FMSUsersApiController extends FMSApiController
 
         try {
             $groupIdentifiers = $this->userService->groupsByUuid($userUuid);
-            $groupItems       = (new FMSDatabasePrivilegesManagementRepository())->paginateGroups(1, 100)['items'] ?? [];
+            $isSuperAdministrator = $this->userAuthorizationService->isSuperAdministrator($authenticatedSubject);
+            $groupItems = (new FMSDatabasePrivilegesManagementRepository())->paginateGroups(1, 100, [
+                'exclude_super_administrator' => ! $isSuperAdministrator,
+            ])['items'] ?? [];
         } catch (InvalidArgumentException $invalidArgumentException) {
             return $this->respondError(404, 'User tidak ditemukan.', null, 404);
         }
 
-        $isSuperAdministrator = $this->authorizationService->isSuperAdministrator($authenticatedSubject);
-        $availableGroups      = array_values(array_filter(
-            $groupItems,
-            static function (array $group) use ($isSuperAdministrator): bool {
-                $isSuperAdminGroup = mb_strtolower(trim((string) ($group['name'] ?? '')), 'UTF-8') === 'super administrator';
-
-                return ! $isSuperAdminGroup || $isSuperAdministrator;
-            },
-        ));
-
         return $this->respondSuccess(200, 'Grup user berhasil dimuat.', [
             'assigned_group_ids' => array_values(array_map('intval', $groupIdentifiers)),
-            'groups'             => $availableGroups,
+            'groups'             => $groupItems,
         ], 200);
     }
 
@@ -528,6 +577,13 @@ class FMSUsersApiController extends FMSApiController
         $requestPayload     = $this->requestPayload();
         $groupIdentifiers   = $requestPayload['group_ids'] ?? $requestPayload['groups'] ?? [];
         $groupIdentifierSet = is_array($groupIdentifiers) ? array_values($groupIdentifiers) : [];
+
+        if (! $this->userAuthorizationService->isSuperAdministrator($authenticatedSubject)) {
+            $groupIdentifierSet = array_values(array_filter(
+                $groupIdentifierSet,
+                static fn ($groupIdentifier): bool => (int) $groupIdentifier !== 1,
+            ));
+        }
 
         try {
             $this->userService->replaceGroupsByUuid(
@@ -558,7 +614,9 @@ class FMSUsersApiController extends FMSApiController
             'username'        => (string) ($user['username'] ?? ''),
             'email'           => (string) ($user['email'] ?? ''),
             'full_name'       => (string) ($user['full_name'] ?? ''),
-            'status'          => (string) ($user['status'] ?? 'active'),
+            'status'          => trim((string) ($user['deleted_at'] ?? '')) !== ''
+                ? 'deleted'
+                : (string) ($user['status'] ?? 'active'),
             'is_email_verified' => trim((string) ($user['email_verified_at'] ?? '')) !== '',
             'locked_until'    => (string) ($user['locked_until'] ?? ''),
             'avatar'          => (string) ($user['avatar'] ?? ''),

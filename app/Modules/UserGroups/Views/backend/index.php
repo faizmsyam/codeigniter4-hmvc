@@ -106,31 +106,6 @@ $baseUrl     = site_url('api/v1/user-groups');
   </div>
 </div>
 
-<!-- Modal Hapus User Group -->
-<div class="modal fade" id="groupDeleteModal" tabindex="-1" aria-hidden="true" aria-labelledby="groupDeleteModalTitle">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title text-danger" id="groupDeleteModalTitle">
-          <i class="ri-delete-bin-line me-1"></i> Hapus User Group
-        </h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-      </div>
-      <div class="modal-body pt-2 pb-1">
-        Hapus user group <strong id="groupDeleteName" class="text-danger"></strong>?
-        <br><small class="text-muted">Data akan dipindahkan ke data terhapus dan dapat dipulihkan kembali.</small>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-danger btn-sm" id="groupDeleteConfirm">
-          <span id="groupDeleteBtnText">Hapus</span>
-          <span id="groupDeleteBtnSpinner" class="spinner-border spinner-border-sm ms-1 d-none"></span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Modal Detail Anggota Grup -->
 <div class="modal fade" id="groupMembersModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -178,10 +153,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const CAN_READ    = <?php echo $can('user_groups.read')    ? 'true' : 'false'; ?>;
 
   const state = { page: 1, perPage: 10, search: '', status: '' };
-  let deleteTarget = null;
 
   const groupModal        = new bootstrap.Modal(document.getElementById('groupModal'));
-  const groupDeleteModal  = new bootstrap.Modal(document.getElementById('groupDeleteModal'));
   const groupMembersModal = new bootstrap.Modal(document.getElementById('groupMembersModal'));
 
   function payloadData(response) {
@@ -360,34 +333,19 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function openDelete(hash, name) {
-    deleteTarget = { hash: hash, name: name };
-    document.getElementById('groupDeleteName').textContent = name;
-    groupDeleteModal.show();
-  }
-
-  function deleteGroup() {
-    if (!deleteTarget) return;
-
-    const button  = document.getElementById('groupDeleteConfirm');
-    const text    = document.getElementById('groupDeleteBtnText');
-    const spinner = document.getElementById('groupDeleteBtnSpinner');
-
-    button.disabled = true;
-    text.textContent = 'Menghapus...';
-    spinner.classList.remove('d-none');
-
-    FMS.del(`${BASE_URL}/${encodeURIComponent(deleteTarget.hash)}`).then(function (res) {
-      groupDeleteModal.hide();
-      FMS.toast(res.message || 'User group berhasil dihapus.', true);
-      loadGroups();
-    }).catch(function (error) {
-      groupDeleteModal.hide();
-      FMS.toast(error.message || 'Gagal menghapus user group.', false);
-    }).finally(function () {
-      button.disabled = false;
-      text.textContent = 'Hapus';
-      spinner.classList.add('d-none');
-      deleteTarget = null;
+    FMS.confirm({
+      title: `Hapus User Group`,
+      message: `Hapus user group "${name}"?`,
+      description: `Data akan dipindahkan ke data terhapus dan dapat dipulihkan kembali.`,
+      confirmLabel: `Hapus`,
+      loadingLabel: `Menghapus...`,
+      variant: `danger`,
+      action: function () {
+        return FMS.del(`${BASE_URL}/${encodeURIComponent(hash)}`).then(function (response) {
+          FMS.toast(response.message || `User group berhasil dihapus.`, true);
+          loadGroups();
+        });
+      }
     });
   }
 
@@ -457,7 +415,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnAdd) btnAdd.addEventListener('click', openCreate);
 
   document.getElementById('btnSaveGroup').addEventListener('click', saveGroup);
-  document.getElementById('groupDeleteConfirm').addEventListener('click', deleteGroup);
   document.getElementById('btnRefresh').addEventListener('click', loadGroups);
 
   document.getElementById('groupsPerPage').addEventListener('change', function () {

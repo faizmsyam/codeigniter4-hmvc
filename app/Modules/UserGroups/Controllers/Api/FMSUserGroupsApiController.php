@@ -3,6 +3,7 @@
 namespace App\Modules\UserGroups\Controllers\Api;
 
 use App\Core\FMSApiController;
+use App\Filters\FMSRequestContext;
 use App\Modules\UserGroups\Services\FMSUserGroupService;
 use CodeIgniter\HTTP\ResponseInterface;
 use InvalidArgumentException;
@@ -24,8 +25,12 @@ final class FMSUserGroupsApiController extends FMSApiController
         $search = trim((string) ($this->request->getGet('search') ?? ''));
         $status = trim((string) ($this->request->getGet('status') ?? ''));
 
+        $authenticatedSubject = FMSRequestContext::authenticatedSubject($this->request);
+        $includeSuperAdministrator = is_array($authenticatedSubject)
+            && $this->authorizationService->isSuperAdministrator($authenticatedSubject);
+
         return $this->respondSuccess(200, 'Daftar user group berhasil dimuat.',
-            $this->service()->listGroups($page, $perPage, $search, $status));
+            $this->service()->listGroups($page, $perPage, $search, $status, $includeSuperAdministrator));
     }
 
     public function show(string $hash = ''): ResponseInterface

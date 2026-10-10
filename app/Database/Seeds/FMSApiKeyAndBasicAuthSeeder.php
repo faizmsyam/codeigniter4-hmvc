@@ -24,8 +24,23 @@ final class FMSApiKeyAndBasicAuthSeeder extends Seeder
 
         $db->transStart();
 
-        /* ── 1. Default Basic Auth Client ───────────────────────── */
-        $basicTable = $db->table('fms_c_basic_auth_clients');
+        /* ── 1. Default authentication policy ───────────────────── */
+        $authSettingsTable = $db->table('c_auth_settings');
+        if ($authSettingsTable->countAllResults() === 0) {
+            $authSettingsTable->insert([
+                'public_registration_enabled'                 => 0,
+                'public_email_verification_required'          => 1,
+                'admin_created_email_verification_required'   => 0,
+                'verification_ttl_minutes'                    => 1440,
+                'resend_cooldown_seconds'                     => 120,
+                'version'                                     => 1,
+                'updated_by'                                  => 1,
+                'updated_at'                                  => $ts,
+            ]);
+        }
+
+        /* ── 2. Default Basic Auth Client ───────────────────────── */
+        $basicTable = $db->table('c_basic_auth_clients');
         $defaultClient = 'fms_default_client';
 
         if ($basicTable->where('username', $defaultClient)->countAllResults() === 0) {
@@ -41,12 +56,12 @@ final class FMSApiKeyAndBasicAuthSeeder extends Seeder
             ]);
         }
 
-        /* ── 2. Default API Key ─────────────────────────────────── */
-        $apiTable = $db->table('fms_c_api_keys');
-        $defaultKeyId = 'fms_default_key_01';
+        /* ── 3. Default API Key ─────────────────────────────────── */
+        $apiTable = $db->table('c_api_keys');
+        $defaultKeyId = 'fmsdefaultkey01';
 
         if ($apiTable->where('key_id', $defaultKeyId)->countAllResults() === 0) {
-            /* Pepper HMAC standar dari .env atau default */
+            /* Verifier menerima header X-API-Key: {key_id}.{key_secret}. */
             $pepper = (string) (getenv('fms.api_key_pepper') ?: getenv('API_KEY_PEPPER') ?: 'fms-starter-secret-pepper-32bytes-key');
             $secretRaw = 'fms-default-secret-token-key-2026';
             $secretEncoded = rtrim(strtr(base64_encode($secretRaw), '+/', '-_'), '=');

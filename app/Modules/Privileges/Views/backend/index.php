@@ -4,7 +4,9 @@
       <h4 class="mb-1">Hak Akses Pengguna</h4>
       <small class="text-muted">Pilih kelompok pengguna, lalu tentukan menu dan fitur yang boleh digunakan.</small>
     </div>
-    <button id="savePrivileges" class="btn btn-primary" type="button">Simpan</button>
+    <button id="savePrivileges" class="btn btn-primary btn-glare btn-wave label-btn" type="button">
+      <i class="ri-save-line label-btn-icon me-2"></i>Simpan
+    </button>
   </div>
 
   <div class="card-body">
@@ -133,13 +135,24 @@
     }
 
     function actionPermissionsForMenu(requiredMappings) {
-      /* Hal yang boleh dilakukan: is_system = 0, terpetakan ke menu ini */
+      /* Hal yang boleh dilakukan: Tambah, Ubah, Hapus, lalu tombol khusus lain. */
+      var priorities = { create: 1, update: 2, delete: 3 };
+
       return requiredMappings
         .map(function(mapping) {
           return permissionByHash(mapping.permission_id);
         })
         .filter(function(p) {
           return p && Number(p.is_system) === 0 && permissionKey(p) !== WILDCARD_KEY;
+        })
+        .sort(function(a, b) {
+          var actionA = String(a.action_name || '').toLowerCase();
+          var actionB = String(b.action_name || '').toLowerCase();
+          var priorityA = priorities[actionA] || 4;
+          var priorityB = priorities[actionB] || 4;
+          if (priorityA !== priorityB) return priorityA - priorityB;
+
+          return Number(a.id || 0) - Number(b.id || 0);
         });
     }
 
@@ -274,18 +287,18 @@
         });
     }
 
-    function setAllMenus(checked) {
-      Array.prototype.forEach.call(document.querySelectorAll('.js-menu-access'), function(toggle) {
+    function setAllFeatures(checked) {
+      Array.prototype.forEach.call(document.querySelectorAll('.js-menu-access, .js-action-permission'), function(toggle) {
+        if (toggle.disabled) return;
         toggle.checked = checked;
-        toggle.dispatchEvent(new Event('change'));
       });
     }
 
     document.getElementById('allowAllMenus').addEventListener('click', function() {
-      setAllMenus(true);
+      setAllFeatures(true);
     });
     document.getElementById('clearAllMenus').addEventListener('click', function() {
-      setAllMenus(false);
+      setAllFeatures(false);
     });
     groupSelect.addEventListener('change', loadGroupPermissions);
 
@@ -305,6 +318,8 @@
         };
       });
       saveButton.disabled = true;
+      var originalSaveHtml = saveButton.innerHTML;
+      saveButton.innerHTML = '<span class="spinner-border spinner-border-sm label-btn-icon me-2"></span>Menyimpan...';
       FMS.put(BASE_URL + '/groups/' + groupHash + '/permissions', {
           permissions: mappings
         })
@@ -317,6 +332,7 @@
         })
         .then(function() {
           saveButton.disabled = false;
+          saveButton.innerHTML = originalSaveHtml;
         });
     });
 

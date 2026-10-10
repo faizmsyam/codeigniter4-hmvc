@@ -94,6 +94,8 @@ final class FMSProfileApiController extends FMSApiController
                 'id'            => (int) ($userRow['id'] ?? 0),
                 'username'      => (string) ($userRow['username'] ?? ''),
                 'email'         => (string) ($userRow['email'] ?? ''),
+                'email_verified_at' => trim((string) ($userRow['email_verified_at'] ?? '')),
+                'is_email_verified' => trim((string) ($userRow['email_verified_at'] ?? '')) !== '',
                 'full_name'     => (string) ($userRow['full_name'] ?? ''),
                 'phone'         => (string) ($userRow['phone'] ?? ''),
                 'status'        => (string) ($userRow['status'] ?? 'active'),
@@ -153,6 +155,25 @@ final class FMSProfileApiController extends FMSApiController
         $searchResult = $this->activityLogService->searchActivity($searchFilters, $pageNumber, $pageSize);
 
         return $this->respondOk('Aktivitas pengguna berhasil dimuat.', $searchResult);
+    }
+
+    public function activityLogDetail(string $activityLogUuid = ''): ResponseInterface
+    {
+        if (($authorizationFailure = $this->requireApiPermission('profile.read')) !== null) {
+            return $authorizationFailure;
+        }
+
+        $userIdentifier = $this->profileUserIdentifier();
+        if ($userIdentifier <= 0 || trim($activityLogUuid) === '') {
+            return $this->respondUnauthorized('Detail aktivitas tidak dapat diakses.');
+        }
+
+        $activityLogEntry = $this->activityLogService->findActivity($activityLogUuid);
+        if ($activityLogEntry === null || (int) ($activityLogEntry['actor_user_id'] ?? 0) !== $userIdentifier) {
+            return $this->respondNotFound('Detail aktivitas tidak ditemukan.');
+        }
+
+        return $this->respondOk('Detail aktivitas berhasil dimuat.', $activityLogEntry);
     }
 
     public function switchGroup(): ResponseInterface
@@ -424,19 +445,134 @@ final class FMSProfileApiController extends FMSApiController
         return $this->respondOk('Password berhasil diperbarui. Silakan login ulang jika diperlukan.');
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Mandatory password change — no current-password required.
+     * Triggered after login when user.must_change_password or admin policy forces it.
+     */
+    public function forceChangePassword(): ResponseInterface
+    {
+        // Authenticate via session (no JWT required for this specific flow)
+        $userIdentifier = (int) session()->get('fms_backend_user_id');
+        if ($userIdentifier <= 0) {
+            return $this->respondUnauthorized('Sesi tidak valid. Silakan login ulang.');
+        }
+
+        // Must be in must-change-password state
+        if (session()->get('fms_backend_must_change_password') !== true) {
+            return $this->respondForbidden('Tidak ada instruksi penggantian password untuk sesi ini.');
+        }
+
+        $payload = $this->profilePayload();
+        $newPassword = (string) ($payload['new_password'] ?? '');
+        $confirmPassword = (string) ($payload['confirm_password'] ?? '');
+
+        if ($newPassword === '' || $confirmPassword === '') {
+            return $this->respondUnprocessableEntity('Kolom password baru wajib diisi.');
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            return $this->respondUnprocessableEntity('Konfirmasi password baru tidak cocok.');
+        }
+
+        // Password strength: min 8 chars, 3 of 4 classes
+        $charClassCount = 0;
+        $charClassCount += preg_match('/[a-z]/', $newPassword) === 1 ? 1 : 0;
+        $charClassCount += preg_match('/[A-Z]/', $newPassword) === 1 ? 1 : 0;
+        $charClassCount += preg_match('/[0-9]/', $newPassword) === 1 ? 1 : 0;
+        $charClassCount += preg_match('/[^A-Za-z0-9]/', $newPassword) === 1 ? 1 : 0;
+
+        if (mb_strlen($newPassword) < 8 || $charClassCount < 3) {
+            return $this->respondUnprocessableEntity(
+                'Password baru minimal 8 karakter dan mengandung minimal 3 dari 4 jenis: huruf besar, huruf kecil, angka, dan simbol.'
+            );
+        }
+
+        try {
+            $userRow = (new FMSUserModel())->find($userIdentifier);
+            if (! is_array($userRow)) {
+                return $this->respondNotFound('Data pengguna tidak ditemukan.');
+            }
+
+            $backendSession = session();
+            $tokenFamilyId = trim((string) $backendSession->get('fms_backend_token_family_id'));
+
+            // Increment session_version to invalidate any other active tokens
+            $newSessionVersion = ((int) ($userRow['session_version'] ?? 1)) + 1;
+
+            (new FMSUserModel())->update($userIdentifier, [
+                'password_hash'       => password_hash($newPassword, PASSWORD_DEFAULT),
+                'password_changed_at' => date('Y-m-d H:i:s'),
+                'must_change_password' => 0,
+                'session_version'     => $newSessionVersion,
+                'updated_by'          => $userIdentifier,
+            ]);
+
+            // Clear the must-change-password session flag
+            $backendSession->remove('fms_backend_must_change_password');
+            // Regenerate session ID after password change (security best practice)
+            $backendSession->regenerate(false);
+
+            FMSAuditLogger::record(
+                event: 'profile.password_forced_changed',
+                module: 'profile',
+                actorId: $userIdentifier,
+                entityType: 'user',
+                entityId: (string) $userIdentifier,
+                description: 'Password mandatory change berhasil dilakukan setelah login.',
+                httpMethod: 'POST',
+                statusCode: 200,
+            );
+
+            return $this->respondOk('Password berhasil diperbarui. Mengalihkan ke dashboard...', [
+                'redirect_url' => site_url(ROUTE_ADMIN . '/dashboard'),
+            ]);
+        } catch (Throwable $exception) {
+            log_message('error', 'Profile forceChangePassword failed: {msg}', ['msg' => $exception->getMessage()]);
+
+            return $this->respondServerError('Gagal memperbarui password.');
+        }
+    }
+
+    /**
+     * Parse request body — JSON preferred, fallback ke POST form data.
+     *
+     * getJSON(true) throws RuntimeException bila Content-Type bukan JSON,
+     * jadi kita tangkap exception-nya supaya POST fallback tetap jalan.
+     *
+     * @return array<string, mixed>
+     */
     private function profilePayload(): array
     {
+        // 1. Coba JSON body
         try {
             $jsonPayload = $this->request->getJSON(true);
             if (is_array($jsonPayload) && $jsonPayload !== []) {
                 return $jsonPayload;
             }
         } catch (Throwable) {
-            // Permintaan form biasa tetap dibaca dari body POST.
+            // Bukan JSON atau parsing gagal — lanjut ke fallback POST.
         }
 
-        return (array) ($this->request->getPost() ?? []);
+        // 2. Fallback: application/x-www-form-urlencoded atau raw POST
+        $post = (array) ($this->request->getPost() ?? []);
+        if ($post !== []) {
+            return $post;
+        }
+
+        // 3. Fallback: raw body string yang belum ter-parse (edge case)
+        $raw = trim((string) $this->request->getBody());
+        if ($raw !== '' && str_starts_with($raw, '{')) {
+            try {
+                $decoded = json_decode($raw, true, 4, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            } catch (Throwable) {
+                // bukan JSON yang valid — abaikan
+            }
+        }
+
+        return [];
     }
 
     private function profileUserIdentifier(): int
@@ -486,8 +622,8 @@ final class FMSProfileApiController extends FMSApiController
     }
 
     /**
-     * Kelompok yang ditugaskan ke pengguna, disaring dari daftar seluruh kelompok
-     * (Super Administrator disembunyikan kecuali untuk faizmsyam).
+     * Kelompok yang ditugaskan ke pengguna. Super Administrator hanya muncul
+     * bila subject login memiliki wildcard permission (*).
      *
      * @param list<int> $assignedGroupIds
      * @return list<array<string, mixed>>
@@ -499,17 +635,13 @@ final class FMSProfileApiController extends FMSApiController
         }
 
         try {
+            $authenticatedSubject = \App\Filters\FMSRequestContext::authenticatedSubject($this->request);
+            $isSuperAdministrator = is_array($authenticatedSubject)
+                && $this->authorizationService->isSuperAdministrator($authenticatedSubject);
             $allGroups = (new FMSDatabasePrivilegesManagementRepository())
-                ->paginateGroups(1, self::SWITCHABLE_GROUP_LIMIT)['items'] ?? [];
-
-            $isFaiz = session()->get('fms_backend_username') === 'faizmsyam';
-            $allGroups = array_values(array_filter(
-                $allGroups,
-                static function (array $groupRow) use ($isFaiz): bool {
-                    return $isFaiz
-                        || mb_strtolower(trim((string) ($groupRow['name'] ?? '')), 'UTF-8') !== 'super administrator';
-                },
-            ));
+                ->paginateGroups(1, self::SWITCHABLE_GROUP_LIMIT, [
+                    'exclude_super_administrator' => ! $isSuperAdministrator,
+                ])['items'] ?? [];
         } catch (Throwable $exception) {
             log_message('error', 'Profile: load all groups failed: {msg}', ['msg' => $exception->getMessage()]);
 

@@ -27,7 +27,8 @@ final class FMSProfileBackendController extends FMSBackendController
             'updateUrl'         => site_url('api/v1/profile'),
             'avatarUrlUpload'   => site_url('api/v1/profile/avatar'),
             'changePasswordUrl' => site_url('api/v1/profile/change-password'),
-            'activityLogsUrl'   => site_url('api/v1/profile/activity-logs'),
+            'activityLogsUrl'       => site_url('api/v1/profile/activity-logs'),
+            'activityLogDetailUrl'  => site_url('api/v1/profile/activity-logs'),
         ]);
     }
 }

@@ -7,16 +7,14 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class FMSProfileDomainTest extends CIUnitTestCase
 {
-    public function testProfileControllerExposesAllRequiredMethods(): void
+    public function testProfileBackendControllerRendersApiDrivenShell(): void
     {
         $controller = new FMSProfileBackendController();
 
-        foreach (['index', 'switchGroup', 'updateProfile', 'updateAvatar', 'changePassword'] as $method) {
-            $this->assertTrue(
-                method_exists($controller, $method),
-                'FMSProfileBackendController harus menyediakan method ' . $method . '.'
-            );
-        }
+        $this->assertTrue(method_exists($controller, 'index'));
+        $source = (string) file_get_contents(APPPATH . 'Modules/Users/Controllers/Backend/FMSProfileBackendController.php');
+        $this->assertStringContainsString('activityLogDetailUrl', $source);
+        $this->assertStringContainsString('api/v1/profile/activity-logs', $source);
     }
 
     public function testProfileViewImplementsNavTabsLayoutWithHakAksesAndGantiRole(): void
@@ -25,9 +23,9 @@ final class FMSProfileDomainTest extends CIUnitTestCase
         $this->assertFileExists($viewFile);
         $source = (string) file_get_contents($viewFile);
 
-        /* Kelompok aktif harus dikecualikan dari tab switch role */
+        /* Kelompok aktif difilter melalui API profile. */
         $this->assertStringContainsString('switchableGroups', $source);
-        $this->assertStringContainsString('currentGroupId', $source);
+        $this->assertStringContainsString('switchable_groups', $source);
 
         /* Memastikan ada struktur Nav Tabs Bootstrap */
         $this->assertStringContainsString('nav nav-tabs', $source);
@@ -38,6 +36,14 @@ final class FMSProfileDomainTest extends CIUnitTestCase
         $this->assertStringContainsString('tab-profile-info', $source);
         $this->assertStringContainsString('tab-profile-roles', $source);
         $this->assertStringContainsString('tab-profile-permissions', $source);
+        $this->assertStringContainsString('activityChangeMarkup', $source);
+        $this->assertStringContainsString('renderActivityPayload', $source);
+        $this->assertStringContainsString('js-profile-activity-detail', $source);
+        $this->assertStringContainsString('data-detail-url', $source);
+
+        $apiController = (string) file_get_contents(APPPATH . 'Modules/Users/Controllers/Api/FMSProfileApiController.php');
+        $this->assertStringContainsString('isSuperAdministrator($authenticatedSubject)', $apiController);
+        $this->assertStringNotContainsString("=== 'faizmsyam'", $apiController);
 
         /* Memastikan tidak ada short tag <?= */
         $this->assertDoesNotMatchRegularExpression('/<\\?=(?!php|xml)/', $source);
@@ -51,9 +57,8 @@ final class FMSProfileDomainTest extends CIUnitTestCase
         $controllerFile = APPPATH . 'Modules/Users/Controllers/Backend/FMSProfileBackendController.php';
         $source = (string) file_get_contents($controllerFile);
 
-        /* Controller harus membuat variabel switchableGroups yang memfilter group aktif */
-        $this->assertStringContainsString('switchableGroups', $source);
-        $this->assertStringContainsString('fms_backend_active_group_id', $source);
+        $this->assertStringContainsString('activityLogDetailUrl', $source);
+        $this->assertStringContainsString('activityLogsUrl', $source);
     }
 
     public function testProfileRolesTabNeverRendersDisabledButtonForActiveGroup(): void
@@ -76,13 +81,14 @@ final class FMSProfileDomainTest extends CIUnitTestCase
         $this->assertStringNotContainsString('Cari hak akses', $source);
     }
 
-    public function testProfileRoutesFileRegistersSwitchGroupEndpoint(): void
+    public function testProfileApiRoutesRegisterActivityDetailEndpoint(): void
     {
-        $routesFile = APPPATH . 'Modules/Users/Config/BackendRoutes.php';
+        $routesFile = APPPATH . 'Modules/Users/Config/ApiRoutes.php';
         $this->assertFileExists($routesFile);
         $source = (string) file_get_contents($routesFile);
 
-        $this->assertStringContainsString('profile/switch-group', $source);
-        $this->assertStringContainsString('profile/change-password', $source);
+        $this->assertStringContainsString("profile',", $source);
+        $this->assertStringContainsString("activity-logs/(:segment)", $source);
+        $this->assertStringContainsString('activityLogDetail', $source);
     }
 }

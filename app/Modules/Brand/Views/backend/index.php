@@ -112,10 +112,11 @@ $can = static fn (string $permission): bool => in_array('*', $permissions, true)
 
           <?php if ($can('brand.update')): ?>
           <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
-            <button type="button" class="btn btn-light" id="brandResetBtn"><i class="ri-refresh-line me-1"></i>Muat Ulang</button>
-            <button type="submit" class="btn btn-primary" id="brandSaveBtn">
-              <span class="spinner-border spinner-border-sm d-none me-1" id="brandSaveSpinner"></span>
-              Simpan Brand
+            <button type="button" class="btn btn-light btn-glare btn-wave label-btn" id="brandResetBtn"><i class="ri-refresh-line label-btn-icon me-2"></i>Muat Ulang</button>
+            <button type="submit" class="btn btn-primary btn-glare btn-wave label-btn" id="brandSaveBtn">
+              <i class="ri-save-line label-btn-icon me-2" id="brandSaveIcon"></i>
+              <span class="spinner-border spinner-border-sm d-none label-btn-icon me-2" id="brandSaveSpinner"></span>
+              <span id="brandSaveText">Simpan Brand</span>
             </button>
           </div>
           <?php endif; ?>
@@ -395,7 +396,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const spinner = document.getElementById('brandSaveSpinner');
     const saveBtn = document.getElementById('brandSaveBtn');
+    const saveIcon = document.getElementById('brandSaveIcon');
+    const saveText = document.getElementById('brandSaveText');
     if (spinner) spinner.classList.remove('d-none');
+    if (saveIcon) saveIcon.classList.add('d-none');
+    if (saveText) saveText.textContent = 'Menyimpan...';
     if (saveBtn) saveBtn.disabled = true;
 
     /* Brand JSON murni: gambar diunggah dulu, lalu object_key masuk payload. */
@@ -417,6 +422,8 @@ document.addEventListener('DOMContentLoaded', function () {
       FMS.toast(error.message || 'Gagal menyimpan brand.', false);
     }).finally(function () {
       if (spinner) spinner.classList.add('d-none');
+      if (saveIcon) saveIcon.classList.remove('d-none');
+      if (saveText) saveText.textContent = 'Simpan Brand';
       if (saveBtn) saveBtn.disabled = false;
     });
   });

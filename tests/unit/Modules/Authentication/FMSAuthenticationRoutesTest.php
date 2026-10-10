@@ -17,16 +17,17 @@ final class FMSAuthenticationRoutesTest extends CIUnitTestCase
 {
     use FeatureTestTrait;
 
-    public function testPublicRoutesOnlyExposeGetLogin(): void
+    public function testPublicRoutesExposeLoginLogoutPasswordAndEmailVerificationPages(): void
     {
         $publicRoutes = (string) file_get_contents(APPPATH . 'Modules/Authentication/Config/PublicRoutes.php');
 
         $this->assertStringContainsString("\$routes->get('fms-auth/in'", $publicRoutes);
         $this->assertStringContainsString("\$routes->get('in'", $publicRoutes);
-        $this->assertStringNotContainsString("fms-auth/out", $publicRoutes);
+        $this->assertStringContainsString("\$routes->get('fms-auth/out'", $publicRoutes);
+        $this->assertStringContainsString("\$routes->get('fms-auth/change-password'", $publicRoutes);
+        $this->assertStringContainsString("\$routes->get('fms-auth/verify-email'", $publicRoutes);
         $this->assertStringNotContainsString("\$routes->post('fms-auth/in'", $publicRoutes);
         $this->assertStringNotContainsString("::class, 'authenticate'", $publicRoutes);
-        $this->assertStringNotContainsString("::class, 'logout'", $publicRoutes);
     }
 
     public function testBackendAuthFilterRedirectsToFmsAuthIn(): void
@@ -35,18 +36,19 @@ final class FMSAuthenticationRoutesTest extends CIUnitTestCase
 
         $this->assertStringContainsString("site_url('fms-auth/in')", $filterSource);
         $this->assertStringNotContainsString("site_url('in')", $filterSource);
+        $this->assertStringContainsString('isTokenFamilyActive', $filterSource);
+        $this->assertStringContainsString('clearBackendSession', $filterSource);
     }
 
-    public function testAuthControllerOnlyRendersLoginViewWithoutProcessing(): void
+    public function testAuthControllerRendersAuthenticationPagesWithoutProcessingCredentials(): void
     {
         $controllerSource = (string) file_get_contents(APPPATH . 'Modules/Authentication/Controllers/FMSAuthenticationController.php');
 
         $this->assertStringContainsString("fmsLayout('login')", $controllerSource);
+        $this->assertStringContainsString("fmsLayout('change-password'", $controllerSource);
+        $this->assertStringContainsString("fmsLayout('verify-email'", $controllerSource);
         $this->assertStringContainsString("site_url(ROUTE_ADMIN . '/dashboard')", $controllerSource);
-        $this->assertStringNotContainsString("site_url('fms-auth/in')", $controllerSource);
-        $this->assertStringNotContainsString("site_url('in')", $controllerSource);
         $this->assertStringNotContainsString('function authenticate', $controllerSource);
-        $this->assertStringNotContainsString('function logout', $controllerSource);
     }
 
     public function testLoginViewSubmitsViaAjaxToApiLoginAndShowsFailure(): void
@@ -103,6 +105,10 @@ final class FMSAuthenticationRoutesTest extends CIUnitTestCase
 
         $this->assertStringContainsString("\$routes->post('auth/logout'", $logoutRouteLine);
         $this->assertStringNotContainsString('filter', $logoutRouteLine);
+        $this->assertStringContainsString("\$routes->get('auth/session-status'", $apiRoutes);
+        $this->assertStringContainsString("\$routes->post('auth/continue-session'", $apiRoutes);
+        $this->assertStringContainsString('sessionStatus', $logoutController);
+        $this->assertStringContainsString('continueSession', $logoutController);
         $this->assertStringContainsString("->regenerate(true)", $logoutController);
         $this->assertStringContainsString("'auth.logout'", $logoutController);
         $this->assertStringContainsString('$this->request->isSecure()', $logoutController);

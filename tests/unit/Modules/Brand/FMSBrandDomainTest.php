@@ -112,6 +112,9 @@ final class FMSBrandDomainTest extends CIUnitTestCase
         $this->assertStringNotContainsString('brand/update', $source);
         $this->assertStringNotContainsString('$brandDataUrl', $source);
         $this->assertStringNotContainsString('$brandUpdateUrl', $source);
+        $this->assertStringContainsString('btn btn-primary btn-glare btn-wave label-btn', $source);
+        $this->assertStringContainsString('ri-save-line label-btn-icon', $source);
+        $this->assertStringContainsString('Menyimpan...', $source);
     }
 
     public function testHeadPartialAndFmsJsContainBrandNameMetadataContract(): void

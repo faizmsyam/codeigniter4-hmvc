@@ -462,10 +462,8 @@
     var method = (options.method || options.type || 'GET').toUpperCase();
     var mutationMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
     var isMutation = mutationMethods.indexOf(method) !== -1;
-    /* Super ringan: GET default tanpa BlockUI global (tetap bisa dipaksa blockUI:true).
-       Mutation default tetap BlockUI kecuali blockUI:false eksplisit. */
-    // var shouldBlockUI = options.blockUI !== undefined ? options.blockUI !== false : isMutation;
-    var shouldBlockUI = true;
+    /* Block UI default untuk semua request; caller dapat override blockUI:false. */
+    var shouldBlockUI = options.blockUI !== undefined ? options.blockUI !== false : true;
 
     var url = options.url;
     var requestData = options.data;
@@ -595,9 +593,9 @@
       return typeof payload.data === 'undefined' ? payload : payload.data;
     }
 
-    if (shouldBlockUI) FMS.blockUI();
-
     function syncRequest() {
+      if (shouldBlockUI) FMS.blockUI();
+
       if (!fireBeforeSend()) {
         var aborted = new Error(options.abortedErrorMessage || 'Permintaan dibatalkan.');
         aborted.aborted = true;
@@ -665,18 +663,25 @@
       return Promise.reject(abortedError);
     }
 
+    if (shouldBlockUI) FMS.blockUI();
+
     var request = window.fetch(url, fetchOptions);
 
     function refreshAccessToken() {
+      var refreshEndpoint = refreshUrl();
+      if (!refreshEndpoint) return Promise.reject(new Error('Endpoint refresh token tidak tersedia.'));
+
       var refreshCsrfToken = cookieValue('fms_csrf') || currentCsrfHash();
-      return window.fetch(refreshUrl(), {
+      var refreshHeaders = {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      };
+      if (refreshCsrfToken) refreshHeaders['FMS-CSRF-TOKEN'] = refreshCsrfToken;
+
+      return window.fetch(refreshEndpoint, {
         method: 'POST',
         credentials: 'same-origin',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/json',
-          'FMS-CSRF-TOKEN': refreshCsrfToken
-        },
+        headers: refreshHeaders,
         body: '{}'
       }).then(function (refreshResponse) {
         return refreshResponse.text().then(function (refreshText) {
@@ -743,38 +748,45 @@
           problem.payload = payload;
           problem.errors = (payload.data && payload.data.errors) ? payload.data.errors : {};
 
-          /* Satu kali retry otomatis saat access token hilang/kedaluwarsa/ditolak. */
-                  if ((response.status === 401 || response.status === 403) && !options._fmsAuthRetried && refreshUrl()) {
-                    options._fmsAuthRetried = true;
-                    return refreshAccessToken().then(function (refreshPayload) {
-                      storeAccessToken(refreshPayload);
-                      var retryFetchOptions = Object.assign({}, fetchOptions);
-                      retryFetchOptions.headers = Object.assign({}, headers, {
-                        Authorization: storedTokenType() + ' ' + storedAccessToken()
-                      });
-                      return window.fetch(url, retryFetchOptions);
-                    }).then(function (retryResponse) {
-                      updateCsrf(retryResponse);
-                      return retryResponse.text().then(function (retryText) {
-                        var retryPayload = null;
-                        try { retryPayload = retryText ? JSON.parse(retryText) : null; } catch (retryParseError) { retryPayload = null; }
+          /* Access token invalid/kedaluwarsa memakai 401. 403 adalah penolakan izin final. */
+          if (response.status === 401 && !options._fmsAuthRetried && refreshUrl()) {
+            options._fmsAuthRetried = true;
+            return refreshAccessToken().then(function (refreshPayload) {
+              storeAccessToken(refreshPayload);
+              var retryFetchOptions = Object.assign({}, fetchOptions);
+              retryFetchOptions.headers = Object.assign({}, headers, {
+                Authorization: storedTokenType() + ' ' + storedAccessToken()
+              });
+              return window.fetch(url, retryFetchOptions);
+            }).then(function (retryResponse) {
+              updateCsrf(retryResponse);
+              return retryResponse.text().then(function (retryText) {
+                var retryPayload = null;
+                try { retryPayload = retryText ? JSON.parse(retryText) : null; } catch (retryParseError) { retryPayload = null; }
 
-                        if (!retryResponse.ok || !retryPayload || retryPayload.status === false) {
-                          var retryFailure = new Error(retryPayload && retryPayload.message ? retryPayload.message : ('HTTP ' + retryResponse.status));
-                          retryFailure.status = retryResponse.status;
-                          retryFailure.payload = retryPayload || null;
-                          throw retryFailure;
-                        }
+                if (!retryResponse.ok || !retryPayload || retryPayload.status === false) {
+                  var retryFailure = new Error(retryPayload && retryPayload.message ? retryPayload.message : ('HTTP ' + retryResponse.status));
+                  retryFailure.status = retryResponse.status;
+                  retryFailure.payload = retryPayload || null;
+                  throw retryFailure;
+                }
 
-                        return typeof retryPayload.data === 'undefined' ? retryPayload : retryPayload.data;
-                      });
-                    }).catch(function (refreshError) {
-                      clearStoredAccessToken();
-                      if (window.location && window.location.pathname && window.location.pathname.indexOf('/fms-auth/in') === -1) {
-                        window.location.href = '/fms-auth/in';
-                      }
-                      throw refreshError;
-                    });
+                return typeof retryPayload.data === 'undefined' ? retryPayload : retryPayload.data;
+              });
+            }).catch(function (refreshError) {
+              var loginPath = (window.FMS && window.FMS.config && window.FMS.config.loginUrl)
+                ? window.FMS.config.loginUrl
+                : '/fms-auth/in';
+              if (Number(refreshError && refreshError.status ? refreshError.status : 0) !== 401) {
+                throw refreshError;
+              }
+              clearStoredAccessToken();
+              var currentPath = window.location && window.location.pathname ? window.location.pathname : '';
+              if (currentPath.indexOf('/fms-auth/in') === -1) {
+                window.location.href = loginPath;
+              }
+              throw refreshError;
+            });
                   }
 
           throw problem;
@@ -855,11 +867,18 @@
     var options = config || {};
     var title = options.title !== undefined ? options.title : 'Konfirmasi';
     var message = options.message !== undefined ? options.message : 'Apakah Anda yakin?';
+    var description = options.description !== undefined ? options.description : '';
     var confirmLabel = options.confirmLabel !== undefined ? options.confirmLabel : 'Ya, Lanjutkan';
+    var loadingLabel = options.loadingLabel !== undefined ? options.loadingLabel : 'Memproses...';
     var cancelLabel = options.cancelLabel !== undefined ? options.cancelLabel : 'Batal';
     var variant = options.variant !== undefined ? options.variant : 'danger';
+    var action = typeof options.action === 'function' ? options.action : null;
 
     var existing = document.getElementById('fmsConfirmModal');
+    if (existing && window.bootstrap && window.bootstrap.Modal) {
+      var existingInstance = window.bootstrap.Modal.getInstance(existing);
+      if (existingInstance) existingInstance.dispose();
+    }
     if (existing) existing.remove();
 
     var modal = document.createElement('div');
@@ -870,16 +889,20 @@
     modal.innerHTML = ''
       + '<div class="modal-dialog modal-sm modal-dialog-centered">'
       +   '<div class="modal-content">'
-      +     '<div class="modal-header border-0 text-' + variant + '">'
+      +     '<div class="modal-header text-' + variant + '">'
       +       '<h6 class="modal-title">' + FMS.escapeHtml(title) + '</h6>'
-      +       '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
+      +       '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>'
       +     '</div>'
       +     '<div class="modal-body">'
       +       '<p class="mb-0">' + FMS.escapeHtml(message) + '</p>'
+      +       (description ? '<small class="d-block text-muted mt-2">' + FMS.escapeHtml(description) + '</small>' : '')
       +     '</div>'
-      +     '<div class="modal-footer border-0 pt-0">'
+      +     '<div class="modal-footer">'
       +       '<button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">' + FMS.escapeHtml(cancelLabel) + '</button>'
-      +       '<button type="button" class="btn btn-' + variant + ' btn-sm" id="fmsConfirmOk">' + FMS.escapeHtml(confirmLabel) + '</button>'
+      +       '<button type="button" class="btn btn-' + variant + ' btn-sm" id="fmsConfirmOk">'
+      +         '<span id="fmsConfirmText">' + FMS.escapeHtml(confirmLabel) + '</span>'
+      +         '<span id="fmsConfirmSpinner" class="spinner-border spinner-border-sm ms-1 d-none"></span>'
+      +       '</button>'
       +     '</div>'
       +   '</div>'
       + '</div>';
@@ -888,22 +911,154 @@
     return new Promise(function (resolve) {
       var bootstrapModal = window.bootstrap && window.bootstrap.Modal ? new window.bootstrap.Modal(modal) : null;
       if (!bootstrapModal) {
-        resolve(true);
+        resolve(false);
+        modal.remove();
         return;
       }
 
       var settled = false;
+      var running = false;
+      var confirmButton = modal.querySelector('#fmsConfirmOk');
+      var confirmText = modal.querySelector('#fmsConfirmText');
+      var confirmSpinner = modal.querySelector('#fmsConfirmSpinner');
       var done = function (value) {
         if (settled) return;
         settled = true;
         resolve(value);
       };
+      var close = function (value) {
+        done(value);
+        bootstrapModal.hide();
+      };
+      var setLoading = function (loading) {
+        running = loading;
+        confirmButton.disabled = loading;
+        confirmText.textContent = loading ? loadingLabel : confirmLabel;
+        confirmSpinner.classList.toggle('d-none', !loading);
+      };
 
-      modal.querySelector('#fmsConfirmOk').addEventListener('click', function () { done(true); });
-      modal.addEventListener('hidden.bs.modal', function () { done(false); });
+      confirmButton.addEventListener('click', function () {
+        if (!action) {
+          close(true);
+          return;
+        }
+        setLoading(true);
+        Promise.resolve().then(action).then(function (result) {
+          close(result === undefined ? true : result);
+        }).catch(function (error) {
+          setLoading(false);
+          FMS.toast(error && error.message ? error.message : 'Proses gagal.', false);
+        });
+      });
+      modal.addEventListener('hide.bs.modal', function (event) {
+        if (running && !settled) event.preventDefault();
+      });
+      modal.addEventListener('hidden.bs.modal', function () {
+        done(false);
+        bootstrapModal.dispose();
+        modal.remove();
+      });
 
       bootstrapModal.show();
     });
+  };
+
+  FMS.initSessionGuard = function (config) {
+    var options = config || {};
+    var statusUrl = options.statusUrl || '/api/v1/auth/session-status';
+    var continueUrl = options.continueUrl || '/api/v1/auth/continue-session';
+    var loginUrl = options.loginUrl || '/fms-auth/in';
+    var pollMilliseconds = Math.max(5000, Number(options.pollMilliseconds || 15000));
+    var warningSeconds = Math.max(30, Number(options.warningSeconds || 300));
+    var prompted = false;
+    var stopped = false;
+
+    function forceLogout() {
+      if (stopped) return;
+      stopped = true;
+      try {
+        sessionStorage.removeItem('fms_access_token');
+        sessionStorage.removeItem('fms_token_type');
+      } catch (storageError) { /* abaikan */ }
+      window.location.href = loginUrl;
+    }
+
+    function continueSession() {
+      var csrfToken = cookieValue('fms_csrf') || currentCsrfHash();
+      return window.fetch(continueUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/json',
+          'FMS-CSRF-TOKEN': csrfToken
+        },
+        body: '{}'
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = null;
+          try { payload = text ? JSON.parse(text) : null; } catch (parseError) { payload = null; }
+          if (!response.ok || !payload || payload.status === false) throw new Error('Sesi berakhir.');
+          return payload.data || payload;
+        });
+      });
+    }
+
+    function askToContinue(remainingSeconds) {
+      if (prompted || stopped) return;
+      prompted = true;
+      var minutes = Math.max(1, Math.ceil(remainingSeconds / 60));
+      FMS.confirm({
+        title: 'Sesi Akan Berakhir',
+        message: 'Sesi Anda akan berakhir sekitar ' + minutes + ' menit lagi. Lanjutkan sesi?',
+        confirmLabel: 'Lanjutkan Sesi',
+        cancelLabel: 'Keluar',
+        variant: 'warning'
+      }).then(function (confirmed) {
+        if (!confirmed) {
+          FMS.logout('/api/v1/auth/logout', loginUrl);
+          return;
+        }
+        return continueSession().then(function () {
+          prompted = false;
+          FMS.toast('Sesi berhasil dilanjutkan.', true);
+        }).catch(forceLogout);
+      });
+    }
+
+    function check() {
+      if (stopped || document.visibilityState === 'hidden') return;
+      window.fetch(statusUrl, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = null;
+          try { payload = text ? JSON.parse(text) : null; } catch (parseError) { payload = null; }
+          if (response.status === 401 || !payload || payload.status === false || !payload.data || payload.data.active !== true) {
+            forceLogout();
+            return;
+          }
+          var remainingSeconds = Number(payload.data.remaining_seconds || 0);
+          if (remainingSeconds <= 0) {
+            forceLogout();
+          } else if (remainingSeconds <= warningSeconds) {
+            askToContinue(remainingSeconds);
+          }
+        });
+      }).catch(function () { /* Gangguan jaringan bukan alasan mengeluarkan user. */ });
+    }
+
+    check();
+    var intervalId = window.setInterval(check, pollMilliseconds);
+    document.addEventListener('visibilitychange', check);
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('beforeunload', function () { window.clearInterval(intervalId); });
+    }
+
+    return { check: check, stop: function () { stopped = true; window.clearInterval(intervalId); } };
   };
 
   FMS.toast = function (message, type, delay) {
@@ -996,22 +1151,33 @@
 
       var unmapped = [];
       Object.keys(errors || {}).forEach(function (field) {
-        var messages = errors[field];
-        var text = Array.isArray(messages)
-          ? (messages.length ? String(messages[0]) : '')
-          : String(messages || '');
+        var messages = Array.isArray(errors[field]) ? errors[field] : [errors[field]];
+        var text = messages
+          .filter(function (message) { return message !== null && message !== undefined && String(message) !== ''; })
+          .map(String)
+          .join(' ');
         if (!text) return;
 
-        var inputId = fieldMap ? fieldMap[field] : field;
-        var input   = inputId ? document.getElementById(inputId) : null;
+        /* Cari input berdasarkan name attribute (standar baru) dalam form. */
+        var escapedField = (window.CSS && typeof window.CSS.escape === 'function')
+          ? window.CSS.escape(field)
+          : String(field).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        var input = form.querySelector('[name="' + escapedField + '"]');
+
+        /* Fallback: cari berdasarkan fieldMap ID atau nama field sebagai ID (legacy compat). */
+        if (!input) {
+          var inputId = fieldMap ? fieldMap[field] : field;
+          input = inputId ? document.getElementById(inputId) : null;
+        }
         if (!input) { unmapped.push(text); return; }
 
-        var feedback = document.getElementById(inputId + 'Err');
+        /* Tulis pesan ke .invalid-feedback sibling dari input dalam .mb-3. */
         input.classList.add('is-invalid');
         input.classList.remove('is-valid');
-        if (feedback) {
-          feedback.textContent = text;
-          feedback.style.display = 'block';
+        var fieldGroup = input.closest('.mb-3') || input.closest('.form-group') || input.parentElement;
+        if (fieldGroup) {
+          var feedback = fieldGroup.querySelector('.invalid-feedback');
+          if (feedback) { feedback.textContent = text; }
         }
       });
 
@@ -1033,25 +1199,43 @@
       var banner = form.querySelector('[data-fms-form-error]');
       if (banner) { banner.textContent = ''; banner.classList.add('d-none'); }
 
-      var keys = fieldMap ? Object.keys(fieldMap) : [];
-      keys.forEach(function (field) {
-        var inputId  = fieldMap[field];
-        var input    = document.getElementById(inputId);
-        var feedback = document.getElementById(inputId + 'Err');
-        if (input) {
+      /* Clear semua field yang punya .invalid-feedback sibling di dalam .mb-3. */
+      var groups = form.querySelectorAll('.mb-3, .form-group');
+      Array.prototype.forEach.call(groups, function (group) {
+        var fb = group.querySelector('.invalid-feedback');
+        if (fb) fb.textContent = '';
+        var inputs = group.querySelectorAll('input, select, textarea');
+        Array.prototype.forEach.call(inputs, function (input) {
           input.classList.remove('is-invalid', 'is-valid');
           if (typeof input.setCustomValidity === 'function') input.setCustomValidity('');
-        }
-        if (feedback) { feedback.textContent = ''; feedback.style.display = ''; }
+        });
       });
+
+      /* Legacy: fieldMap based clear untuk form lama. */
+      if (fieldMap) {
+        Object.keys(fieldMap).forEach(function (field) {
+          var inputId = fieldMap[field];
+          var input = document.getElementById(inputId);
+          if (input) {
+            input.classList.remove('is-invalid', 'is-valid');
+            if (typeof input.setCustomValidity === 'function') input.setCustomValidity('');
+            var feedback = document.getElementById(inputId + 'Err');
+            if (feedback) feedback.textContent = '';
+          }
+        });
+      }
     },
     clearFieldError: function (input) {
       if (!input || !input.id) return;
       input.classList.remove('is-invalid', 'is-valid');
       if (typeof input.setCustomValidity === 'function') input.setCustomValidity('');
-
-      var feedback = document.getElementById(input.id + 'Err');
-      if (feedback) { feedback.textContent = ''; feedback.style.display = ''; }
+      var fieldGroup = input.closest('.mb-3') || input.closest('.form-group') || input.parentElement;
+      if (fieldGroup) {
+        var feedback = fieldGroup.querySelector('.invalid-feedback');
+        if (feedback) feedback.textContent = '';
+      }
+      var legacyFeedback = document.getElementById(input.id + 'Err');
+      if (legacyFeedback) legacyFeedback.textContent = '';
     }
   };
 

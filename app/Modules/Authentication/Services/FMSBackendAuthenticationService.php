@@ -6,6 +6,7 @@ use App\Libraries\FMSAuditLogger;
 use App\Libraries\FMSPermissionClaimService;
 use App\Modules\Authentication\Repositories\FMSDatabaseAuthenticationRepository;
 use App\Modules\Authentication\Repositories\FMSDatabaseRefreshTokenRepository;
+use App\Modules\Authentication\Services\FMSUserSessionService;
 
 /**
  * Single authentication processor shared by the login API.
@@ -25,11 +26,17 @@ final class FMSBackendAuthenticationService
         string $deviceLabel = '',
     ): array {
         $currentTimestamp = date('Y-m-d H:i:s');
-        $loginResult = (new FMSLoginAttemptService(new FMSDatabaseAuthenticationRepository()))->attemptLogin(
+        $authenticationPolicy = $this->authenticationPolicy();
+        $loginResult = (new FMSLoginAttemptService(
+            new FMSDatabaseAuthenticationRepository(),
+            (int) ($authenticationPolicy['login_max_failures'] ?? 5),
+            (int) ($authenticationPolicy['login_failure_window_seconds'] ?? 900),
+            (int) ($authenticationPolicy['login_lockout_seconds'] ?? 900),
+        ))->attemptLogin(
             $identifier,
             $password,
             $clientIpAddress,
-            $this->authenticationPolicy(),
+            $authenticationPolicy,
             $currentTimestamp,
         );
 
@@ -118,6 +125,8 @@ final class FMSBackendAuthenticationService
                 'username' => (string) $userRecord['username'],
                 'email' => (string) $userRecord['email'],
                 'status' => (string) ($userRecord['status'] ?? 'active'),
+                'registration_source' => (string) ($userRecord['registration_source'] ?? 'admin'),
+                'must_change_password' => ! empty($userRecord['must_change_password']),
             ],
         ];
     }
@@ -153,6 +162,21 @@ final class FMSBackendAuthenticationService
             hash('sha256', $userAgent),
         );
 
+        /* Catat sesi perangkat agar daftar sesi admin & tombol keluarkan berfungsi. */
+        try {
+            (new FMSUserSessionService())->create(
+                $userIdentifier,
+                (string) $refreshToken['token_family_id'],
+                $deviceLabel,
+                hash('sha256', $clientIpAddress),
+                hash('sha256', $userAgent),
+                $currentTimestamp,
+                date('Y-m-d H:i:s', strtotime($currentTimestamp) + config(\App\Config\FMSJwt::class)->refreshTokenTtlSeconds),
+            );
+        } catch (\Throwable $sessionFailure) {
+            log_message('error', 'Auth: user session record failed: {msg}', ['msg' => $sessionFailure->getMessage()]);
+        }
+
         FMSAuditLogger::record(
             event: 'auth.login.success',
             module: 'auth',
@@ -174,17 +198,23 @@ final class FMSBackendAuthenticationService
             'token_type' => 'Bearer',
             'expires_in' => config(\App\Config\FMSJwt::class)->accessTokenTtlSeconds,
             'presented_refresh_token' => $refreshToken['presented'],
+            'token_family_id' => $refreshToken['token_family_id'],
         ];
     }
 
-    /** @return array{admin_created_email_verification_required: bool, public_email_verification_required: bool} */
+    /** @return array{admin_created_email_verification_required: bool, public_email_verification_required: bool, admin_must_change_password: bool, login_rate_limit_enabled: bool, login_max_failures: int, login_failure_window_seconds: int, login_lockout_seconds: int} */
     private function authenticationPolicy(): array
     {
         $settings = db_connect()->table('c_auth_settings')->orderBy('id', 'DESC')->get(1)->getRowArray() ?? [];
 
         return [
-            'admin_created_email_verification_required' => (bool) ($settings['admin_created_email_verification_required'] ?? true),
+            'admin_created_email_verification_required' => (bool) ($settings['admin_created_email_verification_required'] ?? false),
             'public_email_verification_required' => (bool) ($settings['public_email_verification_required'] ?? true),
+            'admin_must_change_password' => (bool) ($settings['admin_must_change_password'] ?? false),
+            'login_rate_limit_enabled' => (bool) ($settings['login_rate_limit_enabled'] ?? true),
+            'login_max_failures' => (int) ($settings['login_max_failures'] ?? 5),
+            'login_failure_window_seconds' => (int) ($settings['login_failure_window_seconds'] ?? 900),
+            'login_lockout_seconds' => (int) ($settings['login_lockout_seconds'] ?? 900),
         ];
     }
 }

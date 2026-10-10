@@ -15,6 +15,7 @@
     }
   ?>
   <?php echo isset($fmsBottomScripts) ? $fmsBottomScripts : '' ?>
+  <script src="<?php echo esc(base_url('assets/fms/js/pwa.js?v=2'), 'attr') ?>"></script>
 </body>
 
 </html>

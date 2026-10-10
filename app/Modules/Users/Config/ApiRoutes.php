@@ -34,8 +34,10 @@ $routes->group('users', ['filter' => $usersApiFilter], static function (RouteCol
 $routes->group('profile', ['filter' => $usersApiFilter], static function (RouteCollection $routes): void {
     $routes->get('/', [FMSProfileApiController::class, 'show'], ['as' => 'fms.api.v1.profile.show']);
     $routes->get('activity-logs', [FMSProfileApiController::class, 'activityLogs'], ['as' => 'fms.api.v1.profile.activity-logs']);
+    $routes->get('activity-logs/(:segment)', [FMSProfileApiController::class, 'activityLogDetail'], ['as' => 'fms.api.v1.profile.activity-log-detail']);
     $routes->post('switch-group', [FMSProfileApiController::class, 'switchGroup'], ['as' => 'fms.api.v1.profile.switch-group']);
     $routes->patch('/', [FMSProfileApiController::class, 'updateProfile'], ['as' => 'fms.api.v1.profile.update']);
     $routes->post('avatar', [FMSProfileApiController::class, 'updateAvatar'], ['as' => 'fms.api.v1.profile.avatar']);
     $routes->post('change-password', [FMSProfileApiController::class, 'changePassword'], ['as' => 'fms.api.v1.profile.change-password']);
+    $routes->post('force-change-password', [FMSProfileApiController::class, 'forceChangePassword'], ['as' => 'fms.api.v1.profile.force-change-password']);
 });

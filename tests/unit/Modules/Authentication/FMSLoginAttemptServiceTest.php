@@ -98,7 +98,7 @@ final class FMSLoginAttemptServiceTest extends CIUnitTestCase
         $this->assertSame(FMSLoginAttemptService::STATUS_EMAIL_UNVERIFIED, $loginResult['status']);
     }
 
-    public function testAdminCreatedUserNeverRequiresEmailVerification(): void
+    public function testAdminCreatedUserRequiresEmailVerificationWhenPolicyEnabled(): void
     {
         $userRecord = [
             'id'                  => 10,
@@ -121,7 +121,7 @@ final class FMSLoginAttemptServiceTest extends CIUnitTestCase
             '2026-09-29 10:00:00',
         );
 
-        $this->assertSame(FMSLoginAttemptService::STATUS_AUTHENTICATED, $loginResult['status']);
+        $this->assertSame(FMSLoginAttemptService::STATUS_EMAIL_UNVERIFIED, $loginResult['status']);
     }
 
     public function testSuperAdministratorPublicUserBypassesEmailVerification(): void
@@ -174,6 +174,84 @@ final class FMSLoginAttemptServiceTest extends CIUnitTestCase
         );
 
         $this->assertSame(FMSLoginAttemptService::STATUS_ACCOUNT_LOCKED, $loginResult['status']);
+    }
+
+    public function testRateLimitDisabledPolicySkipsLockoutMaintenance(): void
+    {
+        $userRecord = [
+            'id'                  => 13,
+            'username_normalized' => 'no-limit',
+            'password_hash'       => password_hash('Right-Password-1', PASSWORD_DEFAULT),
+            'status'              => 'active',
+            'registration_source' => 'admin',
+            'email_verified_at'   => null,
+            'failed_login_count'  => 0,
+            'locked_until'        => null,
+        ];
+
+        $enabledRepository = new FakeAuthenticationRepository($userRecord);
+        (new FMSLoginAttemptService($enabledRepository))->attemptLogin(
+            'no-limit',
+            'wrong-password',
+            '10.0.0.7',
+            [
+                'admin_created_email_verification_required' => false,
+                'public_email_verification_required'        => false,
+                'login_rate_limit_enabled'                  => true,
+            ],
+            '2026-09-29 10:00:00',
+        );
+
+        $disabledRepository = new FakeAuthenticationRepository($userRecord);
+        (new FMSLoginAttemptService($disabledRepository))->attemptLogin(
+            'no-limit',
+            'wrong-password',
+            '10.0.0.7',
+            [
+                'admin_created_email_verification_required' => false,
+                'public_email_verification_required'        => false,
+                'login_rate_limit_enabled'                  => false,
+            ],
+            '2026-09-29 10:00:00',
+        );
+
+        /* Rate limit aktif: kegagalan dicatat dan dihitung. */
+        $this->assertSame(1, $enabledRepository->updatedAttributes['failed_login_count'] ?? null);
+        $this->assertArrayNotHasKey('locked_until', $enabledRepository->updatedAttributes);
+
+        /* Rate limit nonaktif: tidak ada maintenance lockout sama sekali. */
+        $this->assertArrayNotHasKey('failed_login_count', $disabledRepository->updatedAttributes);
+        $this->assertArrayNotHasKey('locked_until', $disabledRepository->updatedAttributes);
+    }
+
+    public function testSuperAdministratorBypassesLockedUntilWhenRateLimitEnabled(): void
+    {
+        $userRecord = [
+            'id'                  => 14,
+            'username_normalized' => 'owner-locked',
+            'password_hash'       => password_hash('Secret-123', PASSWORD_DEFAULT),
+            'status'              => 'active',
+            'registration_source' => 'public',
+            'email_verified_at'   => '2026-09-01 00:00:00',
+            'is_super_admin'      => true,
+            'failed_login_count'  => 5,
+            'locked_until'        => '2026-09-29 11:00:00',
+        ];
+        $loginService = new FMSLoginAttemptService(new FakeAuthenticationRepository($userRecord));
+
+        $loginResult = $loginService->attemptLogin(
+            'owner-locked',
+            'Secret-123',
+            '10.0.0.8',
+            [
+                'admin_created_email_verification_required' => true,
+                'public_email_verification_required'        => true,
+                'login_rate_limit_enabled'                  => true,
+            ],
+            '2026-09-29 10:00:00',
+        );
+
+        $this->assertSame(FMSLoginAttemptService::STATUS_AUTHENTICATED, $loginResult['status']);
     }
 }
 

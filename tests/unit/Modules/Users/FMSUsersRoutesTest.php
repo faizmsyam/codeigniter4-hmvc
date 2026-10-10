@@ -37,6 +37,22 @@ final class FMSUsersRoutesTest extends CIUnitTestCase
         $this->assertStringContainsString("'users'", $backendRoutes);
     }
 
+    public function testDeletedFilterExposesRestoreButtonAndDeletedOnlyQuery(): void
+    {
+        $backendView = (string) file_get_contents(APPPATH . 'Modules/Users/Views/backend/index.php');
+        $apiController = (string) file_get_contents(APPPATH . 'Modules/Users/Controllers/Api/FMSUsersApiController.php');
+        $repository = (string) file_get_contents(APPPATH . 'Modules/Users/Repositories/FMSDatabaseUserRepository.php');
+
+        $this->assertStringContainsString('<option value="deleted">Dihapus</option>', $backendView);
+        $this->assertStringContainsString('js-user-restore', $backendView);
+        $this->assertStringContainsString("'deleted_only'", $apiController);
+        $this->assertStringContainsString("deleted_at IS NOT NULL", $repository);
+        $this->assertStringContainsString("'exclude_programmer_super_admin'", $apiController);
+        $this->assertStringContainsString("username_normalized !=', 'faizmsyam'", $repository);
+        $this->assertStringContainsString('isSuperAdministrator($authenticatedSubject)', $apiController);
+        $this->assertStringContainsString("'exclude_super_administrator'", $apiController);
+    }
+
     public function testBackendViewContainsNoShortEchoTags(): void
     {
         $backendView = (string) file_get_contents(APPPATH . 'Modules/Users/Views/backend/index.php');

@@ -14,6 +14,24 @@ use InvalidArgumentException;
  */
 final class FMSUserGroupsDomainTest extends CIUnitTestCase
 {
+    public function testListAndSelectionEndpointsHideSuperAdministratorForOrdinaryAccounts(): void
+    {
+        $userGroupController = (string) file_get_contents(
+            APPPATH . 'Modules/UserGroups/Controllers/Api/FMSUserGroupsApiController.php'
+        );
+        $userGroupService = (string) file_get_contents(
+            APPPATH . 'Modules/UserGroups/Services/FMSUserGroupService.php'
+        );
+        $privilegesRepository = (string) file_get_contents(
+            APPPATH . 'Modules/Privileges/Repositories/FMSDatabasePrivilegesManagementRepository.php'
+        );
+
+        $this->assertStringContainsString('isSuperAdministrator($authenticatedSubject)', $userGroupController);
+        $this->assertStringContainsString('$includeSuperAdministrator', $userGroupService);
+        $this->assertStringContainsString("where('id !=', 1)", $userGroupService);
+        $this->assertStringContainsString("'exclude_super_administrator'", $privilegesRepository);
+    }
+
     public function testServiceExposesStandardCrudWorkflow(): void
     {
         foreach (['listGroups', 'listGroupMembers', 'findById', 'createGroup', 'updateGroup', 'deleteGroup', 'restoreGroup', 'changeStatus'] as $method) {
@@ -142,8 +160,9 @@ final class FMSUserGroupsDomainTest extends CIUnitTestCase
         $this->assertStringNotContainsString('confirmDelete', $source);
         $this->assertStringNotContainsString('window.Swal', $source);
         $this->assertStringNotContainsString("confirm(`", $source);
-        $this->assertStringContainsString('groupDeleteModal', $source);
-        $this->assertStringContainsString('groupDeleteConfirm', $source);
+        $this->assertStringNotContainsString('groupDeleteModal', $source);
+        $this->assertStringNotContainsString('groupDeleteConfirm', $source);
+        $this->assertStringContainsString('FMS.confirm({', $source);
     }
 
     public function testControllerGatesAllActionsWithUserGroupPermissions(): void

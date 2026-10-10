@@ -126,7 +126,8 @@ class FMSController extends Controller
    */
   protected function fmsMeta(array $metaParam = []): void
   {
-    $this->meta['title'] = isset($metaParam['title']) && !empty($metaParam['title']) ? sprintf($this->titleTemplate, $metaParam['title']) : $this->appName;
+    $rawTitle = isset($metaParam['title']) && !empty($metaParam['title']) ? trim((string) $metaParam['title']) : '';
+    $this->meta['title'] = $this->normalizeMetaTitle($rawTitle);
     $this->meta['description'] = isset($metaParam['description']) && !empty($metaParam['description']) ? $metaParam['description'] : ((string) ($this->appBrand['description'] ?? '') ?: APP_DESCRIPTION);
     $this->meta['keywords'] = isset($metaParam['keywords']) && !empty($metaParam['keywords']) ? $metaParam['keywords'] : '';
     $this->meta['image'] = isset($metaParam['image']) && !empty($metaParam['image']) ? $metaParam['image'] : (string) ($this->appBrand['logo_url'] ?? base_url('favicon.ico'));
@@ -135,10 +136,32 @@ class FMSController extends Controller
     $this->meta['signature'] = APP_SIGNATURE;
   }
 
-  /**
-   * Get meta tag array
-   */
+  private function normalizeMetaTitle(string $rawTitle): string
+  {
+    $brandName = trim($this->appName);
+    $title = trim($rawTitle);
 
+    if ($title === '' || $title === $brandName) {
+      return $brandName;
+    }
+
+    $suffix = ' - ' . $brandName;
+    $prefix = $brandName . ' - ';
+
+    while ($brandName !== '' && str_ends_with($title, $suffix)) {
+      $title = trim(substr($title, 0, -strlen($suffix)));
+    }
+
+    while ($brandName !== '' && str_starts_with($title, $prefix)) {
+      $title = trim(substr($title, strlen($prefix)));
+    }
+
+    if ($title === '' || $title === $brandName) {
+      return $brandName;
+    }
+
+    return sprintf($this->titleTemplate, $title);
+  }
   public function getMeta(): array
   {
     return $this->meta;
@@ -264,10 +287,14 @@ class FMSController extends Controller
     $this->fmsLink($this->assetBasePath.'/css/auth/styles.css');
     $this->fmsLink($this->assetBasePath.'/css/icons.css');
 
+    // fms.js must load as a REGULAR (non-bottom) script so that
+    // inline <script> blocks that use FMS.ajax are guaranteed to find it.
+    $this->fmsScript($this->assetBasePath.'/js/fms.js');
     $this->fmsScript($this->assetBasePath.'/libs/bootstrap/js/bootstrap.bundle.min.js');
     $this->fmsScript($this->assetBasePath.'/js/authentication-main.js');
     $this->fmsScript($this->assetBasePath.'/js/show-password.js');
-    $this->fmsSharedCoreScript();
+    $this->fmsScript($this->assetBasePath.'/js/main.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/custom-switcher.min.js');
   }
 
   function fmsInitializeBackend()

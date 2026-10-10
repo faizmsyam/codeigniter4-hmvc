@@ -10,7 +10,8 @@ $switchUrl         = (string) ($switchGroupUrl ?? '');
 $updUrl            = (string) ($updateUrl ?? '');
 $avatarUpUrl       = (string) ($avatarUrlUpload ?? '');
 $changePwUrl       = (string) ($changePasswordUrl ?? '');
-$activityLogUrl    = (string) ($activityLogsUrl ?? '');
+$activityLogUrl       = (string) ($activityLogsUrl ?? '');
+$activityLogDetailUrl = (string) ($activityLogDetailUrl ?? $activityLogUrl);
 ?>
 
 <div class="row" id="profilePage" data-api-url="<?php echo esc($profileApiUrl, 'attr'); ?>">
@@ -38,6 +39,9 @@ $activityLogUrl    = (string) ($activityLogsUrl ?? '');
                 <i class="ti ti-at text-primary me-1"></i><span id="profileUsername">-</span>
                 <span class="mx-2 text-muted">&bull;</span>
                 <i class="ti ti-mail text-primary me-1"></i><span id="profileEmail">-</span>
+                <span id="emailVerifiedBadge" class="badge bg-success-transparent text-success ms-1 d-none">
+                  <i class="ti ti-circle-fill fs-8 me-1"></i>Terverifikasi
+                </span>
               </p>
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="badge bg-primary-transparent fs-12">
@@ -112,6 +116,7 @@ $activityLogUrl    = (string) ($activityLogsUrl ?? '');
                       <div class="col-md-6">
                         <label for="prof_email" class="form-label fs-13 text-muted">Alamat Email</label>
                         <input type="email" class="form-control" id="prof_email" name="email" required>
+                        <div class="form-text fs-11" id="profEmailHint">Email yang sudah terverifikasi tidak dapat diubah.</div>
                       </div>
                       <div class="col-md-6">
                         <label for="prof_phone" class="form-label fs-13 text-muted">Nomor Telepon</label>
@@ -220,7 +225,7 @@ $activityLogUrl    = (string) ($activityLogsUrl ?? '');
 
           <!-- TAB 4 -->
           <div class="tab-pane fade" id="tab-profile-activity" role="tabpanel" aria-labelledby="tab-profile-activity-btn">
-            <div class="card custom-card" id="profileActivityLogs" data-list-url="<?php echo esc($activityLogUrl, 'attr'); ?>">
+            <div class="card custom-card" id="profileActivityLogs" data-list-url="<?php echo esc($activityLogUrl, 'attr'); ?>" data-detail-url="<?php echo esc($activityLogDetailUrl, 'attr'); ?>">
               <div class="card-header border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div>
                   <h6 class="fw-semibold mb-1">Aktivitas Saya</h6>
@@ -332,6 +337,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById(`profileDisplayName`).textContent = displayName;
     document.getElementById(`profileUsername`).textContent = user.username || `-`;
     document.getElementById(`profileEmail`).textContent = user.email || `-`;
+    const emailVerifiedBadge = document.getElementById(`emailVerifiedBadge`);
+    if (emailVerifiedBadge) {
+      emailVerifiedBadge.classList.toggle(`d-none`, user.is_email_verified !== true);
+      emailVerifiedBadge.title = user.is_email_verified === true && user.email_verified_at
+        ? `Diverifikasi: ${formatDateValue(user.email_verified_at, true)}`
+        : ``;
+    }
     document.getElementById(`prof_username`).value = user.username || ``;
     document.getElementById(`prof_fullName`).value = user.full_name || ``;
     document.getElementById(`prof_email`).value = user.email || ``;
@@ -362,8 +374,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById(`profileAvatarTrigger`).classList.toggle(`d-none`, can.update_avatar !== true);
     document.getElementById(`avatarInput`).disabled = can.update_avatar !== true;
 
-    document.getElementById(`prof_email`).disabled = can.update !== true;
-    document.getElementById(`prof_phone`).disabled = can.update !== true;
+    document.getElementById(`prof_email`).disabled = can.update !== true || user.is_email_verified === true;
+    document.getElementById(`prof_email`).readOnly = user.is_email_verified === true;
+    const emailHint = document.getElementById(`profEmailHint`);
+    if (emailHint) {
+      emailHint.textContent = user.is_email_verified === true && user.email_verified_at
+        ? `Email terverifikasi pada ${formatDateValue(user.email_verified_at, true)} — tidak dapat diubah.`
+        : `Email belum terverifikasi dan masih dapat diubah.`;
+    }
     document.getElementById(`profileSaveWrapper`).classList.toggle(`d-none`, can.update !== true);
     document.getElementById(`changePasswordForm`).classList.toggle(`d-none`, can.change_password !== true);
 
@@ -511,6 +529,11 @@ document.addEventListener('DOMContentLoaded', function() {
         phone: String(document.getElementById(`prof_phone`).value || ``).trim()
       };
 
+      /* Jangan kirim email jika field terkunci (sudah terverifikasi). */
+      if (document.getElementById(`prof_email`).readOnly) {
+        delete profilePayload.email;
+      }
+
       FMS.ajax({
         url: updateUrl,
         method: `PATCH`,
@@ -571,26 +594,24 @@ document.addEventListener('DOMContentLoaded', function() {
           title: `Ganti Peran`,
           message: `Beralih ke peran "${grpName}"? Menu dan hak akses akan langsung disesuaikan.`,
           confirmLabel: `Ganti Peran`,
-          variant: `primary`
-        }).then(function (ok) {
-          if (!ok) return;
-          currentBtn.disabled = true;
-
-          FMS.ajax({
-            url: switchUrl,
-            method: `POST`,
-            data: { group_id: Number(grpId) }
-          })
-          .then(function(res) {
-            FMS.toast(res.message || `Berhasil beralih peran.`, true);
-            setTimeout(function() {
-              window.location.reload();
-            }, 800);
-          })
-          .catch(function(err) {
-            currentBtn.disabled = false;
-            FMS.toast(err.message || `Gagal beralih peran.`, false);
-          });
+          loadingLabel: `Mengganti...`,
+          variant: `primary`,
+          action: function () {
+            currentBtn.disabled = true;
+            return FMS.ajax({
+              url: switchUrl,
+              method: `POST`,
+              data: { group_id: Number(grpId) }
+            }).then(function(res) {
+              FMS.toast(res.message || `Berhasil beralih peran.`, true);
+              setTimeout(function() {
+                window.location.reload();
+              }, 800);
+            }).catch(function(err) {
+              currentBtn.disabled = false;
+              throw err;
+            });
+          }
         });
       });
     });
@@ -653,6 +674,13 @@ document.addEventListener('DOMContentLoaded', function() {
     return `<span class="badge bg-${color}-transparent">${escapeProfile(statusCode || `-`)}</span>`;
   }
 
+  function activityChangeMarkup(item) {
+    if (!item.has_changes) return `<span class="text-muted">-</span>`;
+
+    const detailUrl = `${activityRoot.dataset.detailUrl}/${encodeURIComponent(item.uuid)}`;
+    return `<button type="button" class="btn btn-outline-primary btn-sm js-profile-activity-detail" data-detail-url="${escapeProfile(detailUrl)}"><i class="ri-eye-line me-1"></i>Detail</button>`;
+  }
+
   function activityRowMarkup(item) {
     const description = item.description ?
       `<div class="text-muted fs-12 mt-1 text-wrap" style="max-width:360px">${escapeProfile(item.description)}</div>` : ``;
@@ -665,8 +693,66 @@ document.addEventListener('DOMContentLoaded', function() {
       <td><div class="fw-semibold text-default">${escapeProfile(humanizeProfile(item.event))}</div>${description}</td>
       <td><span class="badge bg-primary-transparent">${escapeProfile(humanizeProfile(item.module))}</span></td>
       <td>${activityStatusBadge(item.status_code)}</td>
-      <td>${entity}</td>
+      <td>${activityChangeMarkup(item)}</td>
     </tr>`;
+  }
+
+  function renderActivityPayload(payload) {
+    const value = payload && typeof payload === `object` ? payload : {};
+    return escapeProfile(JSON.stringify(value, null, 2));
+  }
+
+  if (activityRows) {
+    activityRows.addEventListener(`click`, function(event) {
+      const trigger = event.target.closest(`.js-profile-activity-detail`);
+      if (!trigger) return;
+
+      const originalHtml = trigger.innerHTML;
+      trigger.disabled = true;
+      trigger.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Memuat`;
+
+      FMS.get(trigger.dataset.detailUrl).then(function(body) {
+        const item = body && body.data ? body.data : body;
+        const modal = document.createElement(`div`);
+        modal.className = `modal fade`;
+        modal.tabIndex = -1;
+        modal.innerHTML = `<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="ri-file-list-3-line me-2"></i>Detail Perubahan</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="small fw-semibold text-danger mb-2">Before</div>
+                  <pre class="bg-danger-transparent border rounded p-3 mb-0 small" style="min-height:160px;max-height:420px;overflow:auto;white-space:pre-wrap;">${renderActivityPayload(item.before)}</pre>
+                </div>
+                <div class="col-md-6">
+                  <div class="small fw-semibold text-success mb-2">After</div>
+                  <pre class="bg-success-transparent border rounded p-3 mb-0 small" style="min-height:160px;max-height:420px;overflow:auto;white-space:pre-wrap;">${renderActivityPayload(item.after)}</pre>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Tutup</button>
+            </div>
+          </div>
+        </div>`;
+        document.body.appendChild(modal);
+        const instance = new bootstrap.Modal(modal);
+        modal.addEventListener(`hidden.bs.modal`, function() {
+          instance.dispose();
+          modal.remove();
+        });
+        instance.show();
+      }).catch(function(error) {
+        FMS.toast(error.message || `Gagal memuat detail aktivitas.`, false);
+      }).finally(function() {
+        trigger.disabled = false;
+        trigger.innerHTML = originalHtml;
+      });
+    });
   }
 
   function loadProfileActivity(targetPage) {

@@ -59,6 +59,7 @@ final class FMSActivityLogModel extends FMSModel implements FMSActivityLogReposi
     {
         return $this->activitySearchBuilder($filters, true)
             ->select('fms_t_activity_logs.id, fms_t_activity_logs.uuid, fms_t_activity_logs.request_id, fms_t_activity_logs.actor_user_id, fms_t_activity_logs.event, fms_t_activity_logs.module, fms_t_activity_logs.entity_type, fms_t_activity_logs.entity_id, fms_t_activity_logs.description, fms_t_activity_logs.ip_address, fms_t_activity_logs.device_label, fms_t_activity_logs.http_method, fms_t_activity_logs.route_name, fms_t_activity_logs.status_code, fms_t_activity_logs.created_at, fms_m_users.full_name AS actor_name, fms_m_users.username AS actor_username')
+            ->select("CASE WHEN COALESCE(fms_t_activity_logs.before_json, '{}') <> '{}' OR COALESCE(fms_t_activity_logs.after_json, '{}') <> '{}' THEN 1 ELSE 0 END AS has_changes", false)
             ->orderBy('fms_t_activity_logs.id', 'DESC')
             ->limit($limit, $offset)
             ->get()

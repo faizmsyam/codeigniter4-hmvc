@@ -80,8 +80,11 @@ final class FMSUserService
             'avatar' => $this->normalizeNullableText($userData['avatar'] ?? null),
             'status' => $status,
             'registration_source' => $registrationSource,
-            'email_verified_at' => $registrationSource === self::SOURCE_ADMIN ? date('Y-m-d H:i:s') : null,
-            'must_change_password' => (int) ($userData['must_change_password'] ?? 0) === 1 ? 1 : 0,
+            'email_verified_at' => null,
+            'must_change_password' => (int) (
+                $registrationSource === self::SOURCE_ADMIN
+                || ($userData['must_change_password'] ?? 0) === 1
+            ),
             'created_by' => $actorIdentifier,
             'updated_by' => $actorIdentifier,
         ];
@@ -116,13 +119,19 @@ final class FMSUserService
                 throw new InvalidArgumentException('Email is invalid.');
             }
 
-            $preparedData['email'] = $email;
-            $preparedData['email_normalized'] = mb_strtolower($email);
-            $preparedData['email_verified_at'] = ($existingUser['registration_source'] ?? null) === self::SOURCE_ADMIN
-                ? date('Y-m-d H:i:s')
-                : null;
-            $preparedData['token_version'] = ((int) ($existingUser['token_version'] ?? 1)) + 1;
-            $preparedData['session_version'] = ((int) ($existingUser['session_version'] ?? 1)) + 1;
+            $normalizedEmail = mb_strtolower($email);
+            $existingNormalizedEmail = mb_strtolower(trim((string) ($existingUser['email_normalized'] ?? $existingUser['email'] ?? '')));
+            if ($normalizedEmail !== $existingNormalizedEmail) {
+                if (! empty($existingUser['email_verified_at'])) {
+                    throw new InvalidArgumentException('Verified email cannot be changed.');
+                }
+
+                $preparedData['email'] = $email;
+                $preparedData['email_normalized'] = $normalizedEmail;
+                $preparedData['email_verified_at'] = null;
+                $preparedData['token_version'] = ((int) ($existingUser['token_version'] ?? 1)) + 1;
+                $preparedData['session_version'] = ((int) ($existingUser['session_version'] ?? 1)) + 1;
+            }
         }
 
         if (array_key_exists('full_name', $userData)) {
@@ -500,9 +509,16 @@ final class FMSUserService
 
     public function unlock(int $userIdentifier, int $actorIdentifier): bool
     {
-        $this->getUserOrThrow($userIdentifier, true);
+        $repository = $this->requireRepository();
+        $existingUser = $this->getUserOrThrow($userIdentifier, true);
 
-        return $this->requireRepository()->update($userIdentifier, $this->prepareUnlockData($actorIdentifier));
+        return $repository->update($userIdentifier, array_merge(
+            $this->prepareUnlockData($actorIdentifier),
+            [
+                'status' => self::STATUS_ACTIVE,
+                'token_version' => ((int) ($existingUser['token_version'] ?? 1)) + 1,
+            ],
+        ));
     }
 
     public function changeStatus(int $userIdentifier, string $status, int $actorIdentifier): bool
@@ -548,9 +564,11 @@ final class FMSUserService
 
         $revokedSessions = $this->requireRepository()->revokeSessions($userIdentifier, $sessionUuid);
 
-        // Session revocation must immediately invalidate bearer tokens.
+        // Session revocation must immediately invalidate existing access tokens.
+        $existingUser = $this->getUserOrThrow($userIdentifier, true);
         $this->requireRepository()->update($userIdentifier, [
-            'session_version' => ((int) ($this->getUserOrThrow($userIdentifier, true)['session_version'] ?? 1)) + 1,
+            'token_version' => ((int) ($existingUser['token_version'] ?? 1)) + 1,
+            'session_version' => ((int) ($existingUser['session_version'] ?? 1)) + 1,
             'updated_by' => $actorIdentifier,
         ]);
 

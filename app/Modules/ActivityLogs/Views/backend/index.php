@@ -147,6 +147,45 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
       return `<span class="badge bg-${color}-transparent">${esc(statusCode || `-`)}</span>`;
     }
 
+    function changeDetailMarkup(item) {
+      if (!item.has_changes) return `<span class="text-muted">-</span>`;
+
+      return `<button type="button" class="btn btn-outline-primary btn-sm js-activity-detail" data-uuid="${esc(item.uuid)}"><i class="ri-eye-line me-1"></i>Detail</button>`;
+    }
+
+    function renderPayload(payload) {
+      var value = payload && typeof payload === `object` ? payload : {};
+      return esc(JSON.stringify(value, null, 2));
+    }
+
+    function openDetail(item) {
+      var modal = document.createElement(`div`);
+      modal.className = `modal fade`;
+      modal.tabIndex = -1;
+      modal.innerHTML = `<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="ri-file-list-3-line me-2"></i>Detail Perubahan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6"><div class="small fw-semibold text-danger mb-2">Before</div><pre class="bg-danger-transparent border rounded p-3 mb-0 small" style="min-height:160px;max-height:420px;overflow:auto;white-space:pre-wrap;">${renderPayload(item.before)}</pre></div>
+              <div class="col-md-6"><div class="small fw-semibold text-success mb-2">After</div><pre class="bg-success-transparent border rounded p-3 mb-0 small" style="min-height:160px;max-height:420px;overflow:auto;white-space:pre-wrap;">${renderPayload(item.after)}</pre></div>
+            </div>
+          </div>
+          <div class="modal-footer"><button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Tutup</button></div>
+        </div>
+      </div>`;
+      document.body.appendChild(modal);
+      var instance = new bootstrap.Modal(modal);
+      modal.addEventListener(`hidden.bs.modal`, function() {
+        instance.dispose();
+        modal.remove();
+      });
+      instance.show();
+    }
+
     function rowMarkup(item) {
       var description = item.description ?
         `<div class="text-muted fs-12 mt-1 text-wrap" style="max-width:360px">${esc(item.description)}</div>` :
@@ -167,7 +206,7 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
         <td><div class="d-flex align-items-center gap-2"><span class="avatar avatar-xs rounded-circle bg-light text-default"><i class="ri-user-line"></i></span><div><div class="fw-medium">${esc(actorName)}</div><div class="text-muted fs-12">${esc(actorSubtext)}</div></div></div></td>
         <td><div class="fw-medium text-nowrap">${esc(ipLabel)}</div><div class="text-muted fs-12 text-wrap" style="max-width:220px">${esc(deviceLabel)}</div></td>
         <td>${statusBadge(item.status_code)}</td>
-        <td>${entity}</td>
+        <td>${changeDetailMarkup(item)}</td>
       </tr>`;
     }
     var page = 1;
@@ -176,6 +215,26 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
     limitSelect.addEventListener('change', function() {
       perPage = Number(limitSelect.value || 25);
       load(1);
+    });
+
+    rows.addEventListener(`click`, function(event) {
+      var trigger = event.target.closest(`.js-activity-detail`);
+      if (!trigger) return;
+
+      var originalHtml = trigger.innerHTML;
+      trigger.disabled = true;
+      trigger.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Memuat`;
+      FMS.get(`${root.dataset.listUrl}/${encodeURIComponent(trigger.dataset.uuid)}`)
+        .then(function(body) {
+          openDetail(body && body.data ? body.data : body);
+        })
+        .catch(function(error) {
+          FMS.toast(error.message || `Gagal memuat detail aktivitas.`, false);
+        })
+        .finally(function() {
+          trigger.disabled = false;
+          trigger.innerHTML = originalHtml;
+        });
     });
 
     function load(targetPage) {

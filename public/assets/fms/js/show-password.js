@@ -1,17 +1,23 @@
 
 "use strict"
 
-// for show password 
+// for show / hide password
+// Call: createpassword('input-id', anchorElement)
 let createpassword = (type, ele) => {
-    document.getElementById(type).type = document.getElementById(type).type == "password" ? "text" : "password"
-    let icon = ele.childNodes[0].classList
-    let stringIcon = icon.toString()
-    if (stringIcon.includes("ri-eye-line")) {
-        ele.childNodes[0].classList.remove("ri-eye-line")
-        ele.childNodes[0].classList.add("ri-eye-off-line")
-    }
-    else {
-        ele.childNodes[0].classList.add("ri-eye-line")
-        ele.childNodes[0].classList.remove("ri-eye-off-line")
-    }
-}
+    let input = document.getElementById(type);
+    if (!input) return;
+
+    // Toggle input type
+    input.type = input.type === "password" ? "text" : "password";
+
+    // Always target the first actual element child (skip whitespace text nodes)
+    let icon = ele.children[0];
+    if (!icon) return;
+
+    // Determine current visible state
+    let isText = input.type === "text";
+
+    // Remove both possible eye states, then add the correct one
+    icon.classList.remove("ri-eye-line", "ri-eye-off-line");
+    icon.classList.add(isText ? "ri-eye-line" : "ri-eye-off-line");
+};

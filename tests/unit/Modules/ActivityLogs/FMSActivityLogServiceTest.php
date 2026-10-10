@@ -226,6 +226,17 @@ final class FMSActivityLogServiceTest extends CIUnitTestCase
         $this->assertSame('module.entry.b', $searchResult['items'][1]['event']);
     }
 
+    public function testIdentifierRuleUsesRegisteredUuidValidation(): void
+    {
+        $rules = (new \App\Modules\ActivityLogs\Validation\FMSActivityLogValidation())->getIdentifierRules();
+        $validation = \Config\Services::validation();
+        $validation->setRules($rules);
+
+        $this->assertTrue($validation->run(['uuid' => '11111111-1111-4111-8111-111111111111']));
+        $this->assertFalse($validation->run(['uuid' => 'bukan-uuid']));
+        $this->assertStringNotContainsString('valid_uuid', $rules['uuid']['rules']);
+    }
+
     public function testMissingActivityDetailReturnsNull(): void
     {
         $this->assertNull($this->activityLogService->findActivity('11111111-1111-4111-8111-111111111111'));

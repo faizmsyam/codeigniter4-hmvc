@@ -23,7 +23,8 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
      * Module => [actions...]
      * Urutan modul mengikuti urutan menu di sidebar:
      * Dashboard, Control Panel (Brand, Admin Menus, User Groups, Privileges, Users, Profil Saya, Activity Logs).
-     * Urutan action: read/view dulu, create, update, delete, restore, lalu aksi khusus alfabet.
+     * Urutan action: read/view/manage sebagai gate menu, lalu create (Tambah), update (Ubah),
+     * delete (Hapus), dan terakhir seluruh permission tombol/aksi khusus lainnya.
      *
      * @var array<string, list<string>>
      */
@@ -51,6 +52,7 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
         ],
         'profile' => ['read', 'update', 'update_avatar', 'change_password'],
         'activity_logs' => ['read', 'export'],
+        'settings' => ['read', 'update'],
     ];
 
     /**
@@ -64,6 +66,7 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
      *   7 = Users
      *   8 = Profil Saya
      *   9 = Activity Logs
+     *   10 = Settings (Konfigurasi)
      *
      * @var array<int, string>
      */
@@ -76,6 +79,7 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
         7 => 'users',
         8 => 'profile',
         9 => 'activity_logs',
+        10 => 'settings',
     ];
 
     /**

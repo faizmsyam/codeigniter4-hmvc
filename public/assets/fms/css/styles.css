@@ -7713,6 +7713,16 @@ input[type=range]::-webkit-slider-runnable-track {
   border-top-left-radius: 0.3rem;
   border-top-right-radius: 0.3rem;
 }
+.modal .modal-header {
+  padding: 1rem 1.25rem !important;
+}
+.modal .modal-body {
+  padding: 1.25rem !important;
+}
+.modal .modal-footer {
+  padding: 1rem 1.25rem !important;
+  gap: 0.5rem;
+}
 .modal-header .modal-title {
   font-weight: 500;
   line-height: 1;
@@ -26775,4 +26785,84 @@ a.link-underline-dark {
 }
 .focus-ring.focus-ring-dark:focus {
   --bs-focus-ring-color: rgba(var(--dark-rgb), var(--bs-focus-ring-opacity));
+}
+
+/* Dark mode: hovered sidebar items use the same white foreground as active items. */
+[data-theme-mode=dark] .app-sidebar .side-menu__item:hover {
+  color: #fff !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-theme-mode=dark] .app-sidebar .side-menu__item:hover .side-menu__icon,
+[data-theme-mode=dark] .app-sidebar .side-menu__item:hover .side-menu-doublemenu__icon,
+[data-theme-mode=dark] .app-sidebar .side-menu__item:hover .side-menu__label,
+[data-theme-mode=dark] .app-sidebar .side-menu__item:hover .side-menu__angle {
+  color: #fff !important;
+  fill: #fff !important;
+}
+[data-theme-mode=dark] .app-sidebar .side-menu__item:hover svg {
+  color: #fff !important;
+  fill: #fff !important;
+}
+[data-theme-mode=dark] .app-sidebar .doublemenu_bottom-menu .side-menu__item:hover,
+[data-theme-mode=dark] .app-sidebar .doublemenu_bottom-menu .side-menu__item:hover .side-menu__label,
+[data-theme-mode=dark] .app-sidebar .doublemenu_bottom-menu .side-menu__item:hover .side-menu__icon {
+  color: #fff !important;
+  fill: #fff !important;
+}
+
+.fms-header-clock-wrap {
+  align-items: center !important;
+  padding: 0 0.5rem;
+}
+.fms-header-clock-wrap + .header-element {
+  margin-inline-start: 0;
+}
+.fms-header-clock {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 190px;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.5rem;
+  background: rgba(var(--primary-rgb), 0.055);
+  color: var(--default-text-color);
+}
+.fms-header-clock-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  border-radius: 50%;
+  background: rgba(var(--primary-rgb), 0.12);
+  color: var(--primary-color);
+  font-size: 1.05rem;
+}
+.fms-header-clock-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.live-clock-date {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+.live-clock-time {
+  margin-top: 0.15rem;
+  color: var(--default-text-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+[data-theme-mode=dark] .fms-header-clock {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.fms-header-clock-wrap {
+  padding-inline: 0.5rem;
 }
