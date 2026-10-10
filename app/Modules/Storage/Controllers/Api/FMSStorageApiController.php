@@ -116,7 +116,7 @@ final class FMSStorageApiController extends FMSController
         $maximumTtl = (int) config(FMSStorage::class)->shareMaximumTtl;
         $ttl = max(60, min($maximumTtl, (int) ($data['ttl'] ?? 3600)));
         try {
-            (new FMSStorageObjectService())->readLocal($key);
+            (new FMSStorageObjectService())->download($key);
             $token = bin2hex(random_bytes(32));
             db_connect()->table('storage_shares')->insert([
                 'token_hash' => hash('sha256', $token),
@@ -154,16 +154,9 @@ final class FMSStorageApiController extends FMSController
         $key = trim((string) $this->request->getGet('key'));
         if ($key === '') return $this->json(['status' => false, 'message' => 'Key wajib diisi.'], 422);
         try {
-            $data = (new FMSStorageObjectService())->readLocal($key);
-            return $this->json(['status' => true, 'data' => [
-                'key' => $key,
-                'mime' => $data['content_type'],
-                'size' => $data['byte_size'],
-                'sha256' => $data['sha256'],
-                'etag' => '"' . substr($data['sha256'], 0, 16) . '"',
-                'updated_at' => date('Y-m-d H:i:s'),
-                'download_url' => site_url('api/v1/storage/download?key=' . urlencode($key)),
-            ]]);
+            $metadata = (new FMSStorageObjectService())->metadata($key);
+            $metadata['download_url'] = site_url('api/v1/storage/download?key=' . urlencode($metadata['key']));
+            return $this->json(['status' => true, 'data' => $metadata]);
         } catch (Throwable $e) {
             return $this->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
@@ -174,7 +167,7 @@ final class FMSStorageApiController extends FMSController
         $key = trim((string) $this->request->getGet('key'));
         if ($key === '') return $this->response->setStatusCode(400);
         try {
-            $data = (new FMSStorageObjectService())->readLocal($key);
+            $data = (new FMSStorageObjectService())->download($key);
             return $this->response
                 ->setStatusCode(200)
                 ->setContentType($data['content_type'])

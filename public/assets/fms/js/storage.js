@@ -6,6 +6,26 @@
   'use strict';
 
   const root = document.getElementById('fmsStorageRoot');
+  const settingsRoot = document.getElementById('fmsStorageSettingsRoot');
+  if (!root && !settingsRoot) return;
+
+  if (settingsRoot) {
+    const settingsForm = document.getElementById('fmsStoragePassword');
+    if (settingsForm) {
+      settingsForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        FMS.post(settingsRoot.dataset.passwordUrl, Object.fromEntries(new FormData(settingsForm)), { blockUI: true })
+          .then(function () {
+            FMS.toast('Password berhasil diubah.', true);
+            settingsForm.reset();
+          })
+          .catch(function (error) {
+            FMS.toast((error && error.message) || 'Gagal mengubah password.', false);
+          });
+      });
+    }
+  }
+
   if (!root) return;
 
   const api = root.dataset.apiUrl;

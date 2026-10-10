@@ -73,7 +73,7 @@ final class FMSStorageAuthController extends FMSController
         }
 
         try {
-            $object = (new FMSStorageObjectService())->readLocal((string) $row['object_key']);
+            $object = (new FMSStorageObjectService())->download((string) $row['object_key']);
             return $this->response
                 ->setStatusCode(200)
                 ->setContentType($object['content_type'])
