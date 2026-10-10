@@ -81,11 +81,15 @@ CI_ENVIRONMENT = development
 # FMSApiSecurity.csrfHeaderName = FMS-CSRF-TOKEN
 # FMSApiSecurity.csrfCookieName = fms_csrf
 
-#--------------------------------------------------------------------
-# LOGGER
-#--------------------------------------------------------------------
-
-# logger.threshold = 4
+# FMS STORAGE MODULE
+# Pilih MIME yang boleh di-upload, dipisahkan koma.
+# Kosongkan atau hapus baris ini untuk memakai default: image/webp,application/pdf.
+# FMS_STORAGE_ALLOWED_MIME_TYPES = image/webp,application/pdf,image/png
+# Batas upload per object dalam byte.
+# FMSStorage.maximumUploadBytes = 104857600
+# Root bucket private, wajib di luar public/.
+# FMSStorage.storageRoot = /path/to/project/writable/uploads/fms-buckets
+# FMSStorage.bucketName = fms-private
 
 #--------------------------------------------------------------------
 # FMS UPLOAD / PRIVATE OBJECT STORAGE

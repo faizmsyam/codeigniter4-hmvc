@@ -113,7 +113,11 @@ final class FMSS3ObjectStorage implements FMSObjectStorageInterface
         }
 
         /* Whitelist content-type yang diizinkan di S3 layer */
-        $allowedContentTypes = ['image/webp', 'application/pdf'];
+        $allowedContentTypes = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf', 'text/plain', 'application/zip',
+            'application/octet-stream',
+        ];
         if (! in_array($contentType, $allowedContentTypes, true)) {
             throw new InvalidArgumentException('Content type "' . $contentType . '" is not allowed for S3 storage.');
         }

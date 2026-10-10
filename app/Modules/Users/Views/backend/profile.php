@@ -263,9 +263,7 @@ $activityLogDetailUrl = (string) ($activityLogDetailUrl ?? $activityLogUrl);
                 </div>
               </div>
               <div class="card-footer d-none" id="card-footer-profile-activity">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                  <div id="profileActivityPager" class="mb-0"></div>
-                </div>
+                <div id="profileActivityPager" class="mb-0"></div>
               </div>
             </div>
           </div>

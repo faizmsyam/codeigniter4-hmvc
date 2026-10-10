@@ -72,7 +72,12 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
             throw new InvalidArgumentException('Private object source is invalid.');
         }
 
-        if (! in_array($contentType, ['image/webp', 'application/pdf'], true)) {
+        $allowedContentTypes = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf', 'text/plain', 'application/zip',
+            'application/octet-stream',
+        ];
+        if (! in_array($contentType, $allowedContentTypes, true)) {
             throw new InvalidArgumentException('Private object content type is not allowed.');
         }
 
@@ -88,6 +93,13 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
 
         if ($contentType === 'application/pdf' && ! str_starts_with($sourceBytes, '%PDF-')) {
             throw new InvalidArgumentException('Private object must be a validated PDF payload.');
+        }
+
+        if (in_array($contentType, ['image/jpeg', 'image/png', 'image/gif'], true)) {
+            $detectedMime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($sourceBytes);
+            if ($detectedMime !== $contentType) {
+                throw new InvalidArgumentException('Private object MIME signature does not match content type.');
+            }
         }
 
         if (! $this->bucketExists()) {
@@ -217,7 +229,13 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
             throw new InvalidArgumentException('Private object payload is outside the readable range.');
         }
 
-        $contentType = str_starts_with($objectBytes, '%PDF-') ? 'application/pdf' : 'image/webp';
+        $detectedMime = (new \finfo(FILEINFO_MIME_TYPE))->file($absolutePath) ?: 'application/octet-stream';
+        $allowedContentTypes = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf', 'text/plain', 'application/zip',
+            'application/octet-stream',
+        ];
+        $contentType = in_array($detectedMime, $allowedContentTypes, true) ? $detectedMime : 'application/octet-stream';
 
         if ($contentType === 'image/webp'
             && (strlen($objectBytes) < 12 || substr($objectBytes, 0, 4) !== 'RIFF' || substr($objectBytes, 8, 4) !== 'WEBP')) {
@@ -251,7 +269,7 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
 
     private function assertSafeObjectKey(string $objectKey): void
     {
-        if ($objectKey === '' || strlen($objectKey) > 512 || str_starts_with($objectKey, '/') || str_contains($objectKey, '..') || str_contains($objectKey, '\\') || str_contains($objectKey, "\0") || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)*fms-[A-Za-z0-9-]{1,200}\.(webp|pdf)\z#', $objectKey) !== 1) {
+        if ($objectKey === '' || strlen($objectKey) > 512 || str_starts_with($objectKey, '/') || str_contains($objectKey, '..') || str_contains($objectKey, '\\') || str_contains($objectKey, "\0") || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)*fms-[A-Za-z0-9_-]{1,200}\.(jpg|jpeg|png|webp|gif|pdf|txt|zip|bin)\z#', $objectKey) !== 1) {
             throw new InvalidArgumentException('Private object key is invalid.');
         }
     }

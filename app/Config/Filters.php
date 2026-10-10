@@ -17,6 +17,7 @@ use App\Filters\FMSApiAuthenticationFilter;
 use App\Filters\FMSBackendAuthenticationFilter;
 use App\Filters\FMSApiKeyAuthenticationFilter;
 use App\Filters\FMSBasicAuthenticationFilter;
+use App\Filters\FMSStorageAuthenticationFilter;
 use App\Filters\FMSJwtAuthenticationFilter;
 
 class Filters extends BaseFilters
@@ -46,6 +47,7 @@ class Filters extends BaseFilters
         'fms-jwt-authentication'   => FMSJwtAuthenticationFilter::class,
         'fms-api-key-authentication' => FMSApiKeyAuthenticationFilter::class,
         'fms-basic-authentication' => FMSBasicAuthenticationFilter::class,
+        'fms-storage-authentication' => FMSStorageAuthenticationFilter::class,
     ];
 
     /**
