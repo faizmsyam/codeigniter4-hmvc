@@ -968,14 +968,27 @@
     var statusUrl = options.statusUrl || '/api/v1/auth/session-status';
     var continueUrl = options.continueUrl || '/api/v1/auth/continue-session';
     var loginUrl = options.loginUrl || '/fms-auth/in';
-    var pollMilliseconds = Math.max(5000, Number(options.pollMilliseconds || 15000));
+    var pollMilliseconds = Math.max(5000, Number(options.pollMilliseconds || 30000));
     var warningSeconds = Math.max(30, Number(options.warningSeconds || 300));
+    var idleMinutes = Math.max(1, Number(options.idleMinutes || 5));
+    var idleMilliseconds = idleMinutes * 60 * 1000;
     var prompted = false;
     var stopped = false;
+    var lastActivity = Date.now();
+
+    /* Perhatikan kegiatan user agar tidak poll sia-sia. */
+    function touchActivity() { lastActivity = Date.now(); }
+    var activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
+    activityEvents.forEach(function (type) {
+      document.addEventListener(type, touchActivity, { passive: true });
+    });
 
     function forceLogout() {
       if (stopped) return;
       stopped = true;
+      activityEvents.forEach(function (type) {
+        document.removeEventListener(type, touchActivity);
+      });
       try {
         sessionStorage.removeItem('fms_access_token');
         sessionStorage.removeItem('fms_token_type');
@@ -1021,6 +1034,7 @@
         }
         return continueSession().then(function () {
           prompted = false;
+          lastActivity = Date.now();
           FMS.toast('Sesi berhasil dilanjutkan.', true);
         }).catch(forceLogout);
       });
@@ -1028,6 +1042,11 @@
 
     function check() {
       if (stopped || document.visibilityState === 'hidden') return;
+
+      /* Baru cek sesi jika user tidak ada kegiatan selama idleMinutes. */
+      var idleMs = Date.now() - lastActivity;
+      if (idleMs < idleMilliseconds) return;
+
       window.fetch(statusUrl, {
         method: 'GET',
         credentials: 'same-origin',
@@ -1055,7 +1074,12 @@
     var intervalId = window.setInterval(check, pollMilliseconds);
     document.addEventListener('visibilitychange', check);
     if (typeof window.addEventListener === 'function') {
-      window.addEventListener('beforeunload', function () { window.clearInterval(intervalId); });
+      window.addEventListener('beforeunload', function () {
+        window.clearInterval(intervalId);
+        activityEvents.forEach(function (type) {
+          document.removeEventListener(type, touchActivity);
+        });
+      });
     }
 
     return { check: check, stop: function () { stopped = true; window.clearInterval(intervalId); } };
