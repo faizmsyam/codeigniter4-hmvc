@@ -73,6 +73,8 @@ final class FMSPrivilegesDefaultGroupSeeder extends Seeder
 
         'activity_logs.read',
         'activity_logs.export',
+
+        'log_monitor.read',
     ];
 
     public function run(): void

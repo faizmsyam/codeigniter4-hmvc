@@ -129,6 +129,17 @@ final class FMSCMenusSeeder extends Seeder
                 'created_by'   => 1,
             ],
             [
+                'id'           => 11,
+                'id_parent'    => 2,
+                'name'         => 'Log Monitor',
+                'url'          => 'log-monitor',
+                'position'     => 7,
+                'icon'         => 'ph-duotone ph-terminal-window',
+                'is_active'    => 1,
+                'target_blank' => 0,
+                'created_by'   => 1,
+            ],
+            [
                 'id'           => 10,
                 'id_parent'    => 2,
                 'name'         => 'Konfigurasi',

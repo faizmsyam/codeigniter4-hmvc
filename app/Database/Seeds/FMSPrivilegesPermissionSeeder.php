@@ -52,6 +52,7 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
         ],
         'profile' => ['read', 'update', 'update_avatar', 'change_password'],
         'activity_logs' => ['read', 'export'],
+        'log_monitor' => ['read'],
         'settings' => ['read', 'update'],
     ];
 
@@ -80,6 +81,7 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
         8 => 'profile',
         9 => 'activity_logs',
         10 => 'settings',
+        11 => 'log_monitor',
     ];
 
     /**
