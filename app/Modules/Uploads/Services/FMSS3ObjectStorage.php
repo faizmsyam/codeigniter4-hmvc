@@ -31,9 +31,28 @@ final class FMSS3ObjectStorage implements FMSObjectStorageInterface
         if (str_contains($endpointHost, '/') || str_contains($endpointHost, ' ') || str_contains($endpointHost, "\0")) {
             throw new InvalidArgumentException('S3 endpoint host is invalid.');
         }
-        if ($createBucketAutomatically && ! $this->bucketExists()) {
-            $this->createBucket();
+        /* Bucket lifecycle: banyak gateway S3 (mis. MinIO) memberi kunci yang
+           hanya boleh operasi object, BUKAN list/create bucket. HEAD bucket
+           lalu mengembalikan 403 walau bucket ADA. Perlakukan 403 sebagai
+           "bucket ada" dan jangan gagal hanya karena tak bisa membuat bucket;
+           cukup nanati kalau operasi object yang benar-benar gagal. */
+        if ($createBucketAutomatically && $this->bucketLookupStatus() === 404) {
+            try {
+                $this->createBucket();
+            } catch (Throwable $e) {
+                /* Tidak bisa membuat bucket (kunci terbatas). Object ops mungkin
+                   tetap berhasil — biarkan request nyata yang menentukan. */
+            }
         }
+    }
+
+    /**
+     * HEAD bucket: kembalikan kode HTTP.
+     * 200 = ada & boleh list, 403 = ada tapi tak boleh list, 404 = tidak ada.
+     */
+    private function bucketLookupStatus(): int
+    {
+        return $this->sendSignedRequest('HEAD', '', [], '', false)['status'];
     }
 
     public function driverName(): string { return 's3'; }
@@ -134,8 +153,26 @@ final class FMSS3ObjectStorage implements FMSObjectStorageInterface
 
     public function readObject(string $objectKey): array
     {
-        unset($objectKey);
-        throw new RuntimeException('S3 objects are read directly through S3 presigned URLs.');
+        $response = $this->sendSignedRequest('GET', $this->prefixedObjectKey($objectKey));
+        if ($response['status'] !== 200) {
+            throw new RuntimeException('S3 object read failed with status ' . $response['status'] . '.');
+        }
+
+        $objectBytes = $response['body'];
+        if ($objectBytes === '') {
+            throw new RuntimeException('S3 object payload is empty.');
+        }
+
+        $detectedMime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($objectBytes) ?: 'application/octet-stream';
+        $allowedContentTypes = $this->resolvableContentTypes();
+        $contentType = in_array($detectedMime, $allowedContentTypes, true) ? $detectedMime : 'application/octet-stream';
+
+        return [
+            'body'         => $objectBytes,
+            'content_type' => $contentType,
+            'byte_size'    => strlen($objectBytes),
+            'sha256'       => hash('sha256', $objectBytes),
+        ];
     }
 
     /** @return array<string, string> */

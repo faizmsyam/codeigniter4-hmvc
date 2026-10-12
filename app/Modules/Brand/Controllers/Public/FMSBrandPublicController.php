@@ -186,6 +186,14 @@ final class FMSBrandPublicController extends FMSController
     private function resizePng(string $sourceBytes, int $pixelSize): string
     {
         $source = @imagecreatefromstring($sourceBytes);
+
+        /* Sebagian build PHP/GD tidak punya dukungan WebP (imagecreatefromwebp
+           absen), sedangkan logo brand disimpan sebagai WebP. Fallback: decode
+           WebP via binary dwebp ke PNG sementara, lalu muat lewat GD. */
+        if ($source === false && str_starts_with($sourceBytes, 'RIFF') && substr($sourceBytes, 8, 4) === 'WEBP') {
+            $source = $this->decodeWebpViaBinary($sourceBytes);
+        }
+
         if ($source === false) {
             throw new \RuntimeException('Logo brand tidak dapat dibaca sebagai gambar.');
         }
@@ -216,6 +224,67 @@ final class FMSBrandPublicController extends FMSController
         }
 
         return $png;
+    }
+
+    /**
+     * Decode WebP bytes menjadi GdImage lewat binary dwebp (dipakai bila GD
+     * tanpa dukungan WebP). Mengembalikan false bila tidak bisa.
+     *
+     * @return \GdImage|false
+     */
+    private function decodeWebpViaBinary(string $webpBytes)
+    {
+        $binaryPath = $this->resolveDwebpBinary();
+        if ($binaryPath === '') {
+            return false;
+        }
+
+        $webpPath = tempnam(sys_get_temp_dir(), 'fms-brand-src-');
+        $pngPath  = $webpPath . '.png';
+        if (! is_string($webpPath)) {
+            return false;
+        }
+
+        try {
+            if (file_put_contents($webpPath, $webpBytes) === false) {
+                return false;
+            }
+            $command = escapeshellarg($binaryPath) . ' -quiet ' . escapeshellarg($webpPath) . ' -o ' . escapeshellarg($pngPath) . ' 2>/dev/null';
+            $exitCode = 1;
+            @exec($command, $unused, $exitCode);
+            if ($exitCode !== 0 || ! is_file($pngPath)) {
+                return false;
+            }
+            $decoded = @imagecreatefrompng($pngPath);
+
+            return $decoded instanceof \GdImage ? $decoded : false;
+        } finally {
+            if (is_file($webpPath)) @unlink($webpPath);
+            if (is_file($pngPath)) @unlink($pngPath);
+        }
+    }
+
+    private function resolveDwebpBinary(): string
+    {
+        $configured = trim((string) (\App\Config\FMSUploads::runtimeConfig()->dwebpBinary ?? ''));
+        if ($configured !== '' && is_executable($configured)) {
+            return $configured;
+        }
+
+        foreach (['/usr/local/bin/dwebp', '/opt/homebrew/bin/dwebp', '/usr/bin/dwebp', '/bin/dwebp'] as $candidate) {
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        foreach (explode(PATH_SEPARATOR, (string) getenv('PATH')) as $dir) {
+            $candidate = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'dwebp';
+            if ($dir !== '' && is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 
     private function serveFallback(string $relativeAsset): ResponseInterface
