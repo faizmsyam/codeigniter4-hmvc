@@ -334,7 +334,17 @@ Aplikasi menandatangani seluruh response API secara otomatis (Ed25519) dan membu
 php spark fms:keys:generate --scope=response
 php spark fms:keys:generate --scope=jwt
 ```
-Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah di-ignore di `.gitignore`). Tanpa langkah ini, endpoint API akan mengembalikan error `Response signing private key is unavailable.`
+Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah di-ignore di `.gitignore`).
+
+> **Penting**: Aplikasi akan **terblokir total** (HTTP 500 di semua endpoint dan halaman) jika salah satu dari 4 key tersebut tidak ada atau kosong. Pesan errornya langsung menunjukkan key yang hilang dan perintah generate-nya:
+> ```
+> Key kriptografi FMS tidak ditemukan:
+>   - JWT private key (fms-jwt-active.key) tidak ada di /path/writable/keys/fms-jwt-active.key
+> Jalankan perintah berikut di root project:
+>   php spark fms:keys:generate --scope=response
+>   php spark fms:keys:generate --scope=jwt
+> ```
+> Perintah ini idempoten — aman dijalankan berulang. Tambahkan `--force` hanya jika ingin menimpa key lama dengan key baru.
 
 ### 5. Berikan Hak Akses Tulis (Permissions) Direktori `writable/`
 Pastikan direktori cache, session, dan log dapat ditulis oleh web server / CLI:

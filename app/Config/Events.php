@@ -25,6 +25,10 @@ use CodeIgniter\HotReloader\HotReloader;
  */
 
 Events::on('pre_system', static function (): void {
+    if (ENVIRONMENT !== 'testing' && ENVIRONMENT !== 'phpcli') {
+        (new \App\Libraries\FMSKeysGuard())->verify();
+    }
+
     if (ENVIRONMENT === 'production' || getenv('CI_ENVIRONMENT') === 'production') {
         $startupVerification = (new \App\Libraries\FMSStartupGuard())->verify('production', time());
         if ($startupVerification['allowed'] === false) {
