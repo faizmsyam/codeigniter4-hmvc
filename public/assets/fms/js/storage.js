@@ -155,9 +155,11 @@
 
   const root = document.getElementById('fmsStorageRoot');
   const usersRoot = document.getElementById('fmsStorageUsersRoot');
+  const auditRoot = document.getElementById('fmsStorageAuditRoot');
 
   if (root) initBrowser(root);
   if (usersRoot) initUsers(usersRoot);
+  if (auditRoot) initAudit(auditRoot);
   initMimeSettings();
   initStorageConfig();
 
@@ -266,11 +268,11 @@
           rows.forEach(function (row) {
             const metadata = row.metadata && Object.keys(row.metadata).length ? JSON.stringify(row.metadata) : '-';
             const tr = document.createElement('tr');
-            tr.innerHTML = '<td>' + esc(row.created_at) + '</td>'
+            tr.innerHTML = '<td class="text-nowrap">' + esc(row.created_at) + '</td>'
               + '<td>' + esc(row.username || row.full_name || 'system') + '</td>'
               + '<td><span class="badge bg-body-secondary text-body">' + esc(row.event) + '</span></td>'
               + '<td><code class="fms-storage-code">' + esc(row.object_key || '-') + '</code></td>'
-              + '<td><small>' + esc(metadata) + '</small></td>';
+              + '<td class="text-break"><small class="text-muted">' + esc(metadata) + '</small></td>';
             table.appendChild(tr);
           });
           if (!table.children.length) table.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Belum ada aktivitas.</td></tr>';
@@ -283,8 +285,6 @@
     if (refresh) refresh.addEventListener('click', loadAudit);
     loadAudit();
   }
-
-  if (root && document.getElementById('fmsStorageAudit')) initAudit(root);
 
   /* ============================== OBJECT BROWSER ============================== */
   function initBrowser(root) {

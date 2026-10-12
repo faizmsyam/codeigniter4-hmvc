@@ -101,6 +101,12 @@ html[data-theme-mode="dark"] .fms-storage-shell .bg-body-secondary {
   border-bottom-color: var(--fms-storage-border);
 }
 
+.fms-storage-shell .table td,
+.fms-storage-shell .table th {
+  white-space: normal;
+  word-break: break-word;
+}
+
 .fms-storage-shell .table-hover > tbody > tr:hover > * {
   --bs-table-accent-bg: rgba(var(--primary-rgb), .06);
   color: var(--fms-storage-text);

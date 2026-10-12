@@ -10,14 +10,14 @@
       </div>
       <div class="card-body">
         <div class="table-responsive">
-          <table class="table table-hover align-middle">
+          <table class="table table-hover align-middle text-wrap">
             <thead>
               <tr>
-                <th style="width:180px;">Waktu</th>
-                <th style="width:160px;">User</th>
-                <th style="width:180px;">Event</th>
-                <th>Object</th>
-                <th>Detail</th>
+                <th style="width:170px;">Waktu</th>
+                <th style="width:140px;">User</th>
+                <th style="width:150px;">Event</th>
+                <th style="min-width:200px;">Object</th>
+                <th style="min-width:250px;">Detail</th>
               </tr>
             </thead>
             <tbody id="fmsStorageAudit">
