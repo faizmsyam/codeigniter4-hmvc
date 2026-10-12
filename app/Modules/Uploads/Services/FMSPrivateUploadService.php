@@ -4,6 +4,7 @@ namespace App\Modules\Uploads\Services;
 
 use App\Modules\Uploads\Contracts\FMSObjectStorageInterface;
 use InvalidArgumentException;
+use Throwable;
 
 final class FMSPrivateUploadService
 {
@@ -56,16 +57,34 @@ final class FMSPrivateUploadService
     private function normalizeObjectKey(string $objectKey): string
     {
         $normalizedObjectKey = trim(str_replace('\\', '/', $objectKey), '/');
+        $extensions = $this->safeExtensions();
+        $extPattern = implode('|', array_map('preg_quote', $extensions));
         if (
             $normalizedObjectKey === ''
             || strlen($normalizedObjectKey) > 512
             || str_contains($normalizedObjectKey, "\0")
             || str_contains($normalizedObjectKey, '..')
-            || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)+fms-[A-Za-z0-9-]{1,200}\.(webp|pdf)\z#', $normalizedObjectKey) !== 1
+            || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)+fms-[A-Za-z0-9-]{1,200}\.(' . $extPattern . ')\z#', $normalizedObjectKey) !== 1
         ) {
             throw new InvalidArgumentException('Private upload object key is invalid.');
         }
 
         return $normalizedObjectKey;
+    }
+
+    /** Ekstensi yang diizinkan — dibaca dari konfigurasi Storage agar konsisten dengan object service. */
+    private function safeExtensions(): array
+    {
+        try {
+            $mimeExtensions = config(\App\Modules\Storage\Config\FMSStorage::class)->mimeExtensions;
+        } catch (Throwable) {
+            $mimeExtensions = [
+                'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp',
+                'image/gif' => 'gif', 'application/pdf' => 'pdf', 'text/plain' => 'txt',
+                'application/zip' => 'zip', 'application/octet-stream' => 'bin',
+            ];
+        }
+
+        return array_unique(array_values($mimeExtensions));
     }
 }

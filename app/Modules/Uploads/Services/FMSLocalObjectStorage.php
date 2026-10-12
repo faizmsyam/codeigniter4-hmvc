@@ -5,6 +5,7 @@ namespace App\Modules\Uploads\Services;
 use App\Modules\Uploads\Contracts\FMSObjectStorageInterface;
 use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 /** Local S3-compatible abstraction: private bucket/object keys + HMAC presigned GET. */
 final class FMSLocalObjectStorage implements FMSObjectStorageInterface
@@ -72,11 +73,7 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
             throw new InvalidArgumentException('Private object source is invalid.');
         }
 
-        $allowedContentTypes = [
-            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-            'application/pdf', 'text/plain', 'application/zip',
-            'application/octet-stream',
-        ];
+        $allowedContentTypes = $this->resolvableContentTypes();
         if (! in_array($contentType, $allowedContentTypes, true)) {
             throw new InvalidArgumentException('Private object content type is not allowed.');
         }
@@ -230,11 +227,7 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
         }
 
         $detectedMime = (new \finfo(FILEINFO_MIME_TYPE))->file($absolutePath) ?: 'application/octet-stream';
-        $allowedContentTypes = [
-            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-            'application/pdf', 'text/plain', 'application/zip',
-            'application/octet-stream',
-        ];
+        $allowedContentTypes = $this->resolvableContentTypes();
         $contentType = in_array($detectedMime, $allowedContentTypes, true) ? $detectedMime : 'application/octet-stream';
 
         if ($contentType === 'image/webp'
@@ -269,9 +262,49 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
 
     private function assertSafeObjectKey(string $objectKey): void
     {
-        if ($objectKey === '' || strlen($objectKey) > 512 || str_starts_with($objectKey, '/') || str_contains($objectKey, '..') || str_contains($objectKey, '\\') || str_contains($objectKey, "\0") || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)*fms-[A-Za-z0-9_-]{1,200}\.(jpg|jpeg|png|webp|gif|pdf|txt|zip|bin)\z#', $objectKey) !== 1) {
+        $extensions = $this->safeExtensions();
+        $extPattern = implode('|', array_map('preg_quote', $extensions));
+        if ($objectKey === '' || strlen($objectKey) > 512 || str_starts_with($objectKey, '/') || str_contains($objectKey, '..') || str_contains($objectKey, '\\') || str_contains($objectKey, "\0") || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)*fms-[A-Za-z0-9_-]{1,200}\.(' . $extPattern . ')\z#', $objectKey) !== 1) {
             throw new InvalidArgumentException('Private object key is invalid.');
         }
+    }
+
+    /** MIME yang bisa served langsung dari disk (bukan hanya image/webp). */
+    private function resolvableContentTypes(): array
+    {
+        return [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf', 'text/plain', 'text/csv', 'text/html',
+            'application/json', 'application/xml', 'text/markdown',
+            'application/zip', 'application/gzip', 'application/vnd.rar',
+            'application/x-7z-compressed', 'application/x-tar',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.oasis.opendocument.text',
+            'application/vnd.oasis.opendocument.spreadsheet',
+            'application/octet-stream',
+        ];
+    }
+
+    /** Semua ekstensi yang diizinkan — single source of truth untuk regex dan path guard. */
+    private function safeExtensions(): array
+    {
+        try {
+            $mimeExtensions = config(\App\Modules\Storage\Config\FMSStorage::class)->mimeExtensions;
+        } catch (Throwable) {
+            // Fallback kalau modul Storage belum ter-load.
+            $mimeExtensions = [
+                'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp',
+                'image/gif' => 'gif', 'application/pdf' => 'pdf', 'text/plain' => 'txt',
+                'application/zip' => 'zip', 'application/octet-stream' => 'bin',
+            ];
+        }
+
+        return array_unique(array_values($mimeExtensions));
     }
 
     private function base64UrlEncode(string $binaryData): string

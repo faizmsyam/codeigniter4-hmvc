@@ -27,7 +27,12 @@ final class FMSApiSecurityBaselineFilter implements FilterInterface
 
     private const BODYLESS_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
-    private const MULTIPART_ALLOWED_PATH_SUFFIXES = ['/uploads/images', '/brand/images', '/profile/avatar'];
+    private const MULTIPART_ALLOWED_PATH_SUFFIXES = [
+        '/uploads/images',
+        '/brand/images',
+        '/profile/avatar',
+        '/storage/objects',
+    ];
 
     public function __construct(
         private readonly ?FMSApiSecurity $apiSecurityConfiguration = null,

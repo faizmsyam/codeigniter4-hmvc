@@ -24,6 +24,7 @@ final class FMSUploads extends BaseConfig
      * @var array<string, array{mime: string, magic: string|null, extension: string, maxBytes: int, reEncode: bool}>
      */
     public array $allowedFileTypes = [
+        /* ── Gambar (di-re-encode ke WebP) ────────────────── */
         'jpeg' => [
             'mime'      => 'image/jpeg',
             'magic'     => 'FFD8FF',
@@ -45,11 +46,201 @@ final class FMSUploads extends BaseConfig
             'maxBytes'  => 5_242_880,
             'reEncode'  => true,
         ],
+        'gif' => [
+            'mime'      => 'image/gif',
+            'magic'     => '47494638',    /* GIF8 */
+            'extension' => 'webp',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => true,
+        ],
+
+        /* ── Dokumen ──────────────────────────────────────── */
         'pdf' => [
             'mime'      => 'application/pdf',
             'magic'     => '255044462D', /* %PDF- */
             'extension' => 'pdf',
             'maxBytes'  => 20_971_520,   /* 20 MB */
+            'reEncode'  => false,
+        ],
+        'docx' => [
+            'mime'      => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'magic'     => '504B0304',   /* PK.. (OOXML = zip) */
+            'extension' => 'docx',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'doc' => [
+            'mime'      => 'application/msword',
+            'magic'     => 'D0CF11E0',   /* OLE2 */
+            'extension' => 'doc',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'xlsx' => [
+            'mime'      => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'magic'     => '504B0304',
+            'extension' => 'xlsx',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'xls' => [
+            'mime'      => 'application/vnd.ms-excel',
+            'magic'     => 'D0CF11E0',
+            'extension' => 'xls',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'pptx' => [
+            'mime'      => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'magic'     => '504B0304',
+            'extension' => 'pptx',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'ppt' => [
+            'mime'      => 'application/vnd.ms-powerpoint',
+            'magic'     => 'D0CF11E0',
+            'extension' => 'ppt',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'odt' => [
+            'mime'      => 'application/vnd.oasis.opendocument.text',
+            'magic'     => '504B0304',
+            'extension' => 'odt',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+        'ods' => [
+            'mime'      => 'application/vnd.oasis.opendocument.spreadsheet',
+            'magic'     => '504B0304',
+            'extension' => 'ods',
+            'maxBytes'  => 20_971_520,
+            'reEncode'  => false,
+        ],
+
+        /* ── Teks & data ──────────────────────────────────── */
+        'txt' => [
+            'mime'      => 'text/plain',
+            'magic'     => null,
+            'extension' => 'txt',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+        'csv' => [
+            'mime'      => 'text/csv',
+            'magic'     => null,
+            'extension' => 'csv',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+        'json' => [
+            'mime'      => 'application/json',
+            'magic'     => null,
+            'extension' => 'json',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+        'xml' => [
+            'mime'      => 'application/xml',
+            'magic'     => null,
+            'extension' => 'xml',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+        'md' => [
+            'mime'      => 'text/markdown',
+            'magic'     => null,
+            'extension' => 'md',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+        'html' => [
+            'mime'      => 'text/html',
+            'magic'     => null,
+            'extension' => 'html',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+
+        /* ── Arsip ────────────────────────────────────────── */
+        'zip' => [
+            'mime'      => 'application/zip',
+            'magic'     => '504B0304',
+            'extension' => 'zip',
+            'maxBytes'  => 52_428_800,   /* 50 MB */
+            'reEncode'  => false,
+        ],
+        'gz' => [
+            'mime'      => 'application/gzip',
+            'magic'     => '1F8B',
+            'extension' => 'gz',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'rar' => [
+            'mime'      => 'application/vnd.rar',
+            'magic'     => '526172211A07', /* Rar!.. */
+            'extension' => 'rar',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        '7z' => [
+            'mime'      => 'application/x-7z-compressed',
+            'magic'     => '377ABCAF271C',
+            'extension' => '7z',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'tar' => [
+            'mime'      => 'application/x-tar',
+            'magic'     => null,          /* 'ustar' ada di offset 257, bukan prefix */
+            'extension' => 'tar',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+
+        /* ── Audio & video ────────────────────────────────── */
+        'mp3' => [
+            'mime'      => 'audio/mpeg',
+            'magic'     => null,          /* ID3 / frame-sync, bervariasi */
+            'extension' => 'mp3',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'wav' => [
+            'mime'      => 'audio/wav',
+            'magic'     => '52494646',    /* RIFF */
+            'extension' => 'wav',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'ogg' => [
+            'mime'      => 'audio/ogg',
+            'magic'     => '4F676753',    /* OggS */
+            'extension' => 'ogg',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'mp4' => [
+            'mime'      => 'video/mp4',
+            'magic'     => null,          /* 'ftyp' ada di offset 4 */
+            'extension' => 'mp4',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'webm' => [
+            'mime'      => 'video/webm',
+            'magic'     => null,
+            'extension' => 'webm',
+            'maxBytes'  => 52_428_800,
+            'reEncode'  => false,
+        ],
+        'mov' => [
+            'mime'      => 'video/quicktime',
+            'magic'     => null,
+            'extension' => 'mov',
+            'maxBytes'  => 52_428_800,
             'reEncode'  => false,
         ],
     ];

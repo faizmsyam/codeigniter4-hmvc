@@ -5,6 +5,7 @@ namespace App\Modules\Uploads\Services;
 use App\Modules\Uploads\Contracts\FMSObjectStorageInterface;
 use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 /** S3-compatible object storage using AWS Signature Version 4, including bucket lifecycle. */
 final class FMSS3ObjectStorage implements FMSObjectStorageInterface
@@ -113,11 +114,7 @@ final class FMSS3ObjectStorage implements FMSObjectStorageInterface
         }
 
         /* Whitelist content-type yang diizinkan di S3 layer */
-        $allowedContentTypes = [
-            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-            'application/pdf', 'text/plain', 'application/zip',
-            'application/octet-stream',
-        ];
+        $allowedContentTypes = $this->resolvableContentTypes();
         if (! in_array($contentType, $allowedContentTypes, true)) {
             throw new InvalidArgumentException('Content type "' . $contentType . '" is not allowed for S3 storage.');
         }
@@ -284,5 +281,26 @@ final class FMSS3ObjectStorage implements FMSObjectStorageInterface
         return $this->pathStyleEndpoint
             ? '/' . rawurlencode($this->bucketName) . '/' . $encodedObjectPath
             : '/' . $encodedObjectPath;
+    }
+
+    /** Content-type yang boleh ditulis ke backend S3 (selaras dengan object service). */
+    private function resolvableContentTypes(): array
+    {
+        return [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf', 'text/plain', 'text/csv', 'text/html',
+            'application/json', 'application/xml', 'text/markdown',
+            'application/zip', 'application/gzip', 'application/vnd.rar',
+            'application/x-7z-compressed', 'application/x-tar',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.oasis.opendocument.text',
+            'application/vnd.oasis.opendocument.spreadsheet',
+            'application/octet-stream',
+        ];
     }
 }

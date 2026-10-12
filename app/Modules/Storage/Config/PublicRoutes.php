@@ -10,5 +10,5 @@ $routes->get('fms-storage/share/(:segment)', [FMSStorageAuthController::class, '
 $routes->group('fms-storage', ['filter' => 'fms-storage-authentication'], static function (RouteCollection $routes): void {
     $routes->get('/', [FMSStorageBackendController::class, 'index'], ['as' => 'fms.storage.index']);
     $routes->get('settings', [FMSStorageBackendController::class, 'settings'], ['as' => 'fms.storage.settings']);
+    $routes->get('users', [FMSStorageBackendController::class, 'users'], ['as' => 'fms.storage.users']);
 });
-
