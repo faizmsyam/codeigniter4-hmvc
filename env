@@ -63,7 +63,9 @@ FMS_HASHIDS_MIN_LENGTH=12
 # session.savePath = null
 
 #--------------------------------------------------------------------
-# FMS API SECURITY
+# FMS API SECURITY (Opsional / Override)
+# Nilai default production-ready sudah aktif di app/Config/FMSApiSecurity.php
+# Aktifkan baris di bawah hanya jika ingin mengubah batas ukuran atau konfigurasi cookie/CSRF.
 #--------------------------------------------------------------------
 
 # FMSApiSecurity.maximumJsonBodyBytes = 1048576
@@ -86,7 +88,9 @@ FMS_HASHIDS_MIN_LENGTH=12
 # logger.threshold = 4
 
 #--------------------------------------------------------------------
-# FMS UPLOAD / PRIVATE OBJECT STORAGE
+# FMS UPLOAD / OBJECT STORAGE (Fallback Environment)
+# Catatan: Pengaturan utama dikelola secara dinamis via UI FMS Storage Settings
+# (disimpan di database tabel storage_settings). Baris di bawah hanya fallback jika database belum terisi.
 #--------------------------------------------------------------------
 # Driver: local (bucket folder outside public web root) or s3.
 # fmsuploads.storageDriver = local

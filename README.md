@@ -340,13 +340,14 @@ php spark fms:encryption:generate
 > **Catatan**: Service enkripsi bawaan (`service('encrypter')`) secara otomatis membaca `writable/keys/encryption.key`. Jadi Anda **tidak perlu lagi** menyetel `encryption.key` manual di file `.env`. Cukup jalankan perintah generate di atas!
 Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah di-ignore di `.gitignore`).
 
-> **Penting**: Aplikasi akan **terblokir total** (HTTP 500 di semua endpoint dan halaman) jika salah satu dari 4 key tersebut tidak ada atau kosong. Pesan errornya langsung menunjukkan key yang hilang dan perintah generate-nya:
+> **Penting**: Aplikasi akan **terblokir total** (HTTP 500 di semua endpoint dan halaman) jika salah satu key tersebut tidak ada atau kosong. Pesan errornya langsung menunjukkan key yang hilang dan perintah generate-nya:
 > ```
-> Key kriptografi FMS tidak ditemukan:
+> Konfigurasi Kunci / Salt FMS tidak lengkap:
 >   - JWT private key (fms-jwt-active.key) tidak ada di /path/writable/keys/fms-jwt-active.key
-> Jalankan perintah berikut di root project:
+> Pastikan FMS_HASHIDS_SALT diaktifkan di .env dan jalankan generate keys:
 >   php spark fms:keys:generate --scope=response
 >   php spark fms:keys:generate --scope=jwt
+>   php spark fms:encryption:generate
 > ```
 > Perintah ini idempoten — aman dijalankan berulang. Tambahkan `--force` hanya jika ingin menimpa key lama dengan key baru.
 
@@ -372,6 +373,31 @@ Aplikasi dapat diakses melalui browser:
 - **Halaman Utama**: `http://localhost:8080`
 - **Dashboard Backend Admin**: `http://localhost:8080/fms-admin`
 - **Modul FMS Object Storage**: `http://localhost:8080/fms-storage`
+
+---
+
+## Penjelasan Variabel Lingkungan (`.env`) & Konfigurasi
+
+Bagi yang baru melakukan clone, berikut penjelasan mengenai blok-blok konfigurasi di `.env`:
+
+### 1. `fmsuploads.*` (Pengaturan Storage)
+- **Apakah wajib diisi di `.env`?** **TIDAK WAJIB.**
+- **Mengapa?** Modul FMS Object Storage sudah memiliki **UI Pengaturan Storage (FMS Storage Settings)** di menu backend yang menyimpan pengaturannya langsung ke database (`storage_settings`). Driver storage (Local atau S3/MinIO), credential S3, presigned URL, hingga whitelist MIME semuanya dikonfigurasi melalui panel tersebut.
+- Baris `fmsuploads.*` di `.env` hanyalah **fallback darurat** jika database belum terisi atau jika Anda ingin meng-override pengaturan storage via environment server (misal di CI/CD pipeline). Untuk pemakaian normal, biarkan default/commented.
+
+### 2. `FMSApiSecurity.*` (Keamanan Baseline API)
+- **Apakah perlu diaktifkan di `.env`?** **TIDAK PERLU.**
+- **Mengapa?** Filter keamanan API (`FMSApiSecurityBaselineFilter`) **sudah aktif secara otomatis** di seluruh endpoint `api/*` via `app/Config/Filters.php`. Konfigurasi default di `app/Config/FMSApiSecurity.php` sudah disetel aman untuk production:
+  - Batas maksimal JSON body: 1MB (`1048576` bytes)
+  - Batas maksimal upload: 8MB (`8388608` bytes)
+  - Memerlukan header JSON untuk endpoint API non-GET
+  - Pengaturan cookie refresh token HttpOnly & SameSite=Strict
+- Anda hanya perlu mengaktifkan dan mengubah baris `FMSApiSecurity.*` di `.env` jika aplikasi Anda membutuhkan limit upload yang lebih besar (misal file > 8MB) atau ingin mengaktifkan CORS (`allowCrossOriginRequests = true`).
+
+### 3. `FMS_HASHIDS_SALT` & `FMS_HASHIDS_MIN_LENGTH`
+- **Wajib aktif di `.env`**. Digunakan untuk enkripsi auto-increment ID menu dan user groups agar tidak mudah ditebak di URL/API. Minimal 32 karakter.
+
+---
 
 ## Perintah modul
 
