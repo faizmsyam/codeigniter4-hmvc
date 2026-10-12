@@ -12,6 +12,10 @@ use {useStatement};
 
 class {class} extends {extends}
 {
-  protected $table            = 'table'; 
-  protected $allowedFields    = [];
+    protected $table            = '{table}';
+    protected $primaryKey       = 'id';
+    protected $useAutoIncrement = true;
+    protected $returnType       = 'array';
+    protected $allowedFields    = [];
+    protected $useTimestamps    = true;
 }

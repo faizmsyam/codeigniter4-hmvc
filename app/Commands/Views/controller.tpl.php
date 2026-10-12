@@ -12,9 +12,8 @@ use {useStatement};
 
 class {class} extends {extends}
 {
-
-  function index()
-  {
-      
-  }
+    public function index()
+    {
+        return $this->fmsView('index');
+    }
 }

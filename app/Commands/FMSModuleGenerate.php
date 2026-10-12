@@ -7,160 +7,203 @@ use CodeIgniter\CLI\CLI;
 use CodeIgniter\CLI\GeneratorTrait;
 
 /**
- * Generates a skeleton controller file.
+ * Generates skeleton module MVC files with standard FMS prefix.
  */
 class FMSModuleGenerate extends BaseCommand
 {
-  use GeneratorTrait;
+    use GeneratorTrait;
 
-  /**
-   * The Command's Group
-   *
-   * @var string
-   */
-  protected $group = 'Generators';
+    /**
+     * The Command's Group
+     *
+     * @var string
+     */
+    protected $group = 'Generators';
 
-  /**
-   * The Command's Name
-   *
-   * @var string
-   */
-  protected $name = 'make:module';
+    /**
+     * The Command's Name
+     *
+     * @var string
+     */
+    protected $name = 'make:module';
 
-  /**
-   * The Command's Description
-   *
-   * @var string
-   */
-  protected $description = 'Generates a new module MVC files.';
+    /**
+     * The Command's Description
+     *
+     * @var string
+     */
+    protected $description = 'Generates new module MVC files with standard FMS prefix.';
 
-  /**
-   * The Command's Usage
-   *
-   * @var string
-   */
-  protected $usage = 'make:module <name>';
+    /**
+     * The Command's Usage
+     *
+     * @var string
+     */
+    protected $usage = 'make:module <name>';
 
-  /**
-   * The Command's Arguments
-   *
-   * @var array<string, string>
-   */
-  protected $arguments = [];
-
-  /**
-   * The Command's Options
-   *
-   * @var array<string, string>
-   */
-  protected $options = [];
-
-  /**
-   * Actually execute a command.
-   */
-  public function run(array $params)
-  {
-    $directory_main_folder = "Modules";
-    if (!is_dir(APPPATH . $directory_main_folder)) {
-      if (mkdir(APPPATH . $directory_main_folder, 0755, true)) {
-        CLI::write("Modules Folder created", 'green');
-      } else {
-        CLI::error("Modules Folder create failed, please create a new folder(Modules) inside APP or try again");
-        return;
-      }
-    }
-    $directory_name = array_shift($params);
-    $directory = "$directory_main_folder/$directory_name";
-    if (!is_dir(APPPATH . $directory)) {
-      mkdir(APPPATH . $directory, 0755, true);
-      CLI::write('Module folder created - ' . APPPATH . $directory, 'green');
-    }
-
-    $this->generateDirectories($directory);
-    $this->generateFiles($directory, $directory_name);
-
-    CLI::write('Module "' . $directory_name . '" has been created.', 'green');
-  }
-
-  protected function generateDirectories($directory)
-  {
-    $directories = [
-      'Config',
-      'Controllers',
-      'Models',
-      'Views',
+    /**
+     * The Command's Arguments
+     *
+     * @var array<string, string>
+     */
+    protected $arguments = [
+        'name' => 'Nama modul yang akan dibuat (misal: Reports atau ProductCatalog)',
     ];
 
-    foreach ($directories as $dir) {
-      $folder_require = APPPATH . $directory . '/' . $dir;
-      if (!is_dir($folder_require)) {
-        mkdir($folder_require, 0755, true);
-      }
+    /**
+     * The Command's Options
+     *
+     * @var array<string, string>
+     */
+    protected $options = [];
+
+    /**
+     * Actually execute a command.
+     */
+    public function run(array $params): int
+    {
+        helper('inflector');
+
+        $rawName = array_shift($params);
+        if (empty($rawName)) {
+            $rawName = CLI::prompt('Masukkan nama modul', null, 'required');
+        }
+
+        $rawName = trim((string) $rawName);
+        if ($rawName === '') {
+            CLI::error('Nama modul wajib disertakan.');
+
+            return EXIT_ERROR;
+        }
+
+        // Normalisasi nama modul: hilangkan prefix fms jika user sudah mengetikkannya agar tidak double
+        $cleanName = preg_replace('/^fms[-_]?/i', '', $rawName);
+        if ($cleanName === '') {
+            $cleanName = $rawName;
+        }
+
+        $moduleName = pascalize($cleanName);
+        $fmsPrefix = 'FMS' . $moduleName;
+
+        $directoryMainFolder = 'Modules';
+        $modulesPath = APPPATH . $directoryMainFolder;
+        if (! is_dir($modulesPath)) {
+            if (! mkdir($modulesPath, 0755, true)) {
+                CLI::error('Gagal membuat direktori Modules di ' . APPPATH);
+
+                return EXIT_ERROR;
+            }
+            CLI::write('Direktori Modules berhasil dibuat', 'green');
+        }
+
+        $directory = "$directoryMainFolder/$moduleName";
+        $moduleFullPath = APPPATH . $directory;
+        if (! is_dir($moduleFullPath)) {
+            mkdir($moduleFullPath, 0755, true);
+            CLI::write('Direktori modul dibuat: ' . $moduleFullPath, 'green');
+        }
+
+        $this->generateDirectories($directory);
+        $this->generateFiles($directory, $moduleName, $fmsPrefix);
+
+        CLI::write(sprintf('Modul "%s" berhasil dibuat dengan prefix seragam (%s).', $moduleName, $fmsPrefix), 'green');
+        CLI::write(sprintf('  - Controller : App\Modules\%s\Controllers\%sController.php', $moduleName, $fmsPrefix), 'yellow');
+        CLI::write(sprintf('  - Model      : App\Modules\%s\Models\%sModel.php', $moduleName, $fmsPrefix), 'yellow');
+        CLI::write(sprintf('  - Routes     : App/Modules/%s/Config/Routes.php', $moduleName), 'yellow');
+        CLI::write(sprintf('  - View       : App/Modules/%s/Views/index.php', $moduleName), 'yellow');
+
+        return EXIT_SUCCESS;
     }
-  }
 
-  protected function generateFiles($directory, $directory_name)
-  {
-    helper('inflector');
-    $namespace = str_replace('/', '\\', $directory);
-    $routes_template = $this->getTemplate(
-      'routes.tpl.php',
-      [
-        '{directoryName}' => $directory_name,
-      ]
-    );
+    protected function generateDirectories(string $directory): void
+    {
+        $directories = [
+            'Config',
+            'Controllers',
+            'Models',
+            'Views',
+        ];
 
-    $controller_template = $this->getTemplate(
-      'controller.tpl.php',
-      [
-        '{namespace}' => "App\\$namespace\\Controllers",
-        '{useStatement}' => 'App\Core\FMSController',
-        '{class}' => pascalize($directory_name . 'Controller'),
-        '{extends}' => 'FMSController',
-        '{directoryName}' => $directory_name,
-      ]
-    );
-
-    $model_template = $this->getTemplate(
-      'model.tpl.php',
-      [
-        '{namespace}' => "App\\$namespace\\Models",
-        '{useStatement}' => 'App\Core\FMSModel',
-        '{class}' => pascalize($directory_name . 'Model'),
-        '{extends}' => 'FMSModel',
-        '{directoryName}' => $directory_name,
-      ]
-    );
-
-    $view_template = $this->getTemplate(
-      'view.tpl.php',
-      [
-        '{moduleName}' => $directory_name
-      ]
-    );
-
-    file_put_contents(APPPATH . $directory . '/Config/Routes.php', $routes_template);
-    file_put_contents(APPPATH . $directory . '/Controllers/' . ucwords($directory_name) . 'Controller.php', $controller_template);
-    file_put_contents(APPPATH . $directory . '/Models/' . pascalize($directory_name) . 'Model.php', $model_template);
-    file_put_contents(APPPATH . $directory . '/Views/index.php', $view_template);
-  }
-
-  protected function getTemplate($templateFile, $placeholders)
-  {
-    $templatePath = APPPATH . 'Commands/Views/' . $templateFile;
-
-    if (!file_exists($templatePath)) {
-      CLI::write('Template file not found: ' . $templateFile, 'red');
-      return '';
+        foreach ($directories as $dir) {
+            $folderRequire = APPPATH . $directory . '/' . $dir;
+            if (! is_dir($folderRequire)) {
+                mkdir($folderRequire, 0755, true);
+            }
+        }
     }
 
-    $templateContent = file_get_contents($templatePath);
+    protected function generateFiles(string $directory, string $moduleName, string $fmsPrefix): void
+    {
+        helper('inflector');
+        $namespace = str_replace('/', '\\', $directory);
+        $routeUri = strtolower(dasherize(underscore($moduleName)));
+        $tableName = 'fms_' . strtolower(underscore($moduleName));
 
-    foreach ($placeholders as $placeholder => $value) {
-      $templateContent = str_replace($placeholder, $value, $templateContent);
+        $controllerClass = $fmsPrefix . 'Controller';
+        $modelClass = $fmsPrefix . 'Model';
+
+        $routesTemplate = $this->getTemplate(
+            'routes.tpl.php',
+            [
+                '{controllerNamespace}' => "App\\$namespace\\Controllers",
+                '{controllerClass}'     => $controllerClass,
+                '{routeUri}'            => $routeUri,
+                '{directoryName}'       => $moduleName,
+            ]
+        );
+
+        $controllerTemplate = $this->getTemplate(
+            'controller.tpl.php',
+            [
+                '{namespace}'    => "App\\$namespace\\Controllers",
+                '{useStatement}' => 'App\Core\FMSController',
+                '{class}'        => $controllerClass,
+                '{extends}'      => 'FMSController',
+                '{directoryName}'=> $moduleName,
+            ]
+        );
+
+        $modelTemplate = $this->getTemplate(
+            'model.tpl.php',
+            [
+                '{namespace}'    => "App\\$namespace\\Models",
+                '{useStatement}' => 'App\Core\FMSModel',
+                '{class}'        => $modelClass,
+                '{extends}'      => 'FMSModel',
+                '{table}'        => $tableName,
+                '{directoryName}'=> $moduleName,
+            ]
+        );
+
+        $viewTemplate = $this->getTemplate(
+            'view.tpl.php',
+            [
+                '{moduleName}' => $moduleName,
+            ]
+        );
+
+        file_put_contents(APPPATH . $directory . '/Config/Routes.php', $routesTemplate);
+        file_put_contents(APPPATH . $directory . '/Controllers/' . $controllerClass . '.php', $controllerTemplate);
+        file_put_contents(APPPATH . $directory . '/Models/' . $modelClass . '.php', $modelTemplate);
+        file_put_contents(APPPATH . $directory . '/Views/index.php', $viewTemplate);
     }
-    $templateContent = str_replace('<@php', '<?php', $templateContent);
 
-    return $templateContent;
-  }
+    protected function getTemplate(string $templateFile, array $placeholders): string
+    {
+        $templatePath = APPPATH . 'Commands/Views/' . $templateFile;
+
+        if (! file_exists($templatePath)) {
+            CLI::write('Template file not found: ' . $templateFile, 'red');
+
+            return '';
+        }
+
+        $templateContent = (string) file_get_contents($templatePath);
+
+        foreach ($placeholders as $placeholder => $value) {
+            $templateContent = str_replace($placeholder, $value, $templateContent);
+        }
+
+        return str_replace('<@php', '<?php', $templateContent);
+    }
 }

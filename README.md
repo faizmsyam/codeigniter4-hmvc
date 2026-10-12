@@ -297,11 +297,21 @@ Short echo tag berikut dilarang:
 
 Ikuti langkah-langkah berikut secara berurutan saat pertama kali melakukan clone repository:
 
-### 1. Clone Repository & Masuk ke Direktori
+### 1. Clone Repository & Putuskan Remote Starter
+Clone repository ke folder proyek baru Anda:
 ```bash
-git clone https://github.com/faizmsyam/codeigniter4-hmvc.git
-cd codeigniter4-hmvc
+git clone https://github.com/faizmsyam/codeigniter4-hmvc.git nama-proyek-anda
+cd nama-proyek-anda
 ```
+
+> ⚠️ **PENTING: Segera Ganti Remote Origin (Cegah Push Balik ke Repo Starter)**:
+> Repository ini adalah template starter. Jangan pernah melakukan `git push` ke repository starter ini agar tidak merusak codebase template. Segera arahkan remote origin ke repository Git proyek baru Anda:
+> ```bash
+> git remote set-url origin https://github.com/username-anda/repo-proyek-baru.git
+> # Verifikasi remote sudah berubah:
+> git remote -v
+> ```
+> *(Jika belum membuat repository baru di GitHub/GitLab, Anda dapat memutuskan remote sementara dengan `git remote remove origin`).*
 
 ### 2. Pasang Dependensi Composer
 ```bash
@@ -405,18 +415,20 @@ Generator modul yang tersedia:
 
 ```bash
 php spark make:module NamaModul
+# atau
+php spark fms:make:module NamaModul
 ```
 
-Generator tersebut hanya membuat kerangka dasar modul dan belum otomatis memenuhi seluruh kontrak API-first FMS. Struktur hasil generator saat ini mencakup:
+Generator ini otomatis membuat kerangka modul MVC ber-prefix seragam `FMS`:
 
 ```text
 app/Modules/NamaModul/
 ├── Config/
 │   └── Routes.php
 ├── Controllers/
-│   └── NamaModulController.php
+│   └── FMSNamaModulController.php
 ├── Models/
-│   └── NamaModulModel.php
+│   └── FMSNamaModulModel.php
 └── Views/
     └── index.php
 ```
@@ -429,14 +441,18 @@ app/Modules/NamaModul/
    php spark make:module Reports
    ```
 
-2. Generator membuat modul pada `app/Modules/Reports` dan menulis file dasar. Nama modul sebaiknya PascalCase tanpa spasi, misalnya `Reports`, `UserGroups`, atau `ActivityLogs`.
+2. Generator membuat modul pada `app/Modules/Reports` dan menulis file ber-prefix seragam FMS:
+   - `Controllers/FMSReportsController.php` (class `FMSReportsController extends FMSController`)
+   - `Models/FMSReportsModel.php` (class `FMSReportsModel extends FMSModel` dengan table `fms_reports`)
+   - `Config/Routes.php` (otomatis memetakan route GET `/reports` ke `FMSReportsController::index`)
+   - `Views/index.php`
 
 3. Periksa hasilnya:
 
    ```bash
    find app/Modules/Reports -maxdepth 3 -type f | sort
-   php -l app/Modules/Reports/Controllers/ReportsController.php
-   php -l app/Modules/Reports/Models/ReportsModel.php
+   php -l app/Modules/Reports/Controllers/FMSReportsController.php
+   php -l app/Modules/Reports/Models/FMSReportsModel.php
    ```
 
 4. Untuk modul API-first, ubah struktur menjadi vertical slice FMS:
@@ -584,6 +600,69 @@ Source code saat ini memiliki fondasi HMVC dan API-first yang aktif:
 - Backend controller untuk modul API-first hanya merender shell halaman.
 
 Masih perlu dilakukan secara bertahap: browser/e2e verification penuh, shimmer loading global, dan penyelesaian integrasi lanjutan yang tercatat pada rencana proyek.
+
+## Cara Mengganti Remote Origin ke Git Lain (Repository Baru)
+
+Jika setelah clone starter ini Anda ingin menyambungkannya ke repository Git proyek Anda sendiri (GitHub, GitLab, Bitbucket, atau Git server lokal):
+
+### 1. Periksa Remote Git Saat Ini
+```bash
+git remote -v
+```
+
+### 2. Ubah URL Remote Origin
+Ganti URL origin dengan repository baru Anda (pilih HTTPS atau SSH):
+
+```bash
+# Menggunakan HTTPS:
+git remote set-url origin https://github.com/username-anda/nama-repo-baru.git
+
+# ATAU menggunakan SSH:
+git remote set-url origin git@github.com:username-anda/nama-repo-baru.git
+```
+
+> **Alternatif (Hapus lalu Tambah Ulang)**:
+> ```bash
+> git remote remove origin
+> git remote add origin https://github.com/username-anda/nama-repo-baru.git
+> ```
+
+### 3. Verifikasi Perubahan Remote
+```bash
+git remote -v
+```
+Pastikan `origin (fetch)` dan `origin (push)` sudah menunjuk ke URL repository baru.
+
+### 4. Push Seluruh Kode ke Repository Baru
+```bash
+# Pastikan berada di branch main
+git branch -M main
+
+# Push branch main dan jadikan upstream default
+git push -u origin main
+
+# (Opsional) Push seluruh tags jika ingin menyertakan versi rilis starter
+git push --tags
+```
+
+> **Tips Jika Repository Baru di GitHub Sudah Memiliki File (README / License)**:
+> Jika repository baru dibuat dengan opsi centang *Add a README file*, satukan history sebelum push:
+> ```bash
+> git pull origin main --allow-unrelated-histories --rebase
+> git push -u origin main
+> ```
+> Atau jika repository baru memang disiapkan kosong untuk menerima codebase starter ini sepenuhnya:
+> ```bash
+> git push -u origin main --force
+> ```
+
+### 5. Rekomendasi Proteksi untuk Pemilik Template (Maintainer)
+Agar repository starter utama (`faizmsyam/codeigniter4-hmvc`) tidak bisa diotak-atik atau tertimpa oleh developer lain yang clone:
+1. **Jadikan Template Repository**: Buka repository di GitHub -> **Settings** -> centang **Template repository**. Pengguna cukup menekan tombol hijau **"Use this template"** untuk membuat repo baru tanpa risiko menyentuh repo starter.
+2. **Aktifkan Branch Protection pada `main`**: Buka **Settings** -> **Branches** -> tambah rule untuk branch `main`:
+   - Centang *Require a pull request before merging*.
+   - Centang *Do not allow bypassing the above settings*.
+   - Centang *Block force pushes*.
 
 ## Lisensi
 
