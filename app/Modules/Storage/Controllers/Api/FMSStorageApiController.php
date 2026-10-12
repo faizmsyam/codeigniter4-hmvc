@@ -253,12 +253,20 @@ final class FMSStorageApiController extends FMSController
             if (! $data['previewable']) {
                 return $this->json(['status' => false, 'message' => 'Tipe object tidak mendukung pratinjau.'], 415);
             }
-            return $this->response
+            $response = $this->response
                 ->setStatusCode(200)
                 ->setContentType($data['mime'])
                 ->setHeader('Content-Disposition', 'inline; filename="' . basename((string) $data['key']) . '"')
                 ->setHeader('Cache-Control', 'private, max-age=60')
-                ->setBody($data['body']);
+                ->setHeader('X-Content-Type-Options', 'nosniff');
+
+            // SVG inline bisa mengeksekusi <script>. Netralkan dengan CSP ketat
+            // tanpa mematikan render gambar (style inline tetap diizinkan).
+            if (strtolower((string) $data['mime']) === 'image/svg+xml') {
+                $response->setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:");
+            }
+
+            return $response->setBody($data['body']);
         } catch (Throwable $e) {
             return $this->response->setStatusCode(404);
         }

@@ -54,6 +54,22 @@ final class FMSUploads extends BaseConfig
             'reEncode'  => true,
         ],
 
+        /* ── Favicon & vector ──────────────────────────────── */
+        'ico' => [
+            'mime'      => 'image/vnd.microsoft.icon',
+            'magic'     => '00000100',   /* Reserved=0, Type=1(ICO), Count=1 */
+            'extension' => 'ico',
+            'maxBytes'  => 1_048_576,   /* 1 MB */
+            'reEncode'  => false,
+        ],
+        'svg' => [
+            'mime'      => 'image/svg+xml',
+            'magic'     => null,          /* teks: <svg */
+            'extension' => 'svg',
+            'maxBytes'  => 5_242_880,
+            'reEncode'  => false,
+        ],
+
         /* ── Dokumen ──────────────────────────────────────── */
         'pdf' => [
             'mime'      => 'application/pdf',

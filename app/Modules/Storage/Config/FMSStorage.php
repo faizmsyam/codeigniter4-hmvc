@@ -28,6 +28,8 @@ final class FMSStorage extends BaseConfig
         'image/png' => 'png',
         'image/webp' => 'webp',
         'image/gif' => 'gif',
+        'image/vnd.microsoft.icon' => 'ico',
+        'image/svg+xml' => 'svg',
         'application/pdf' => 'pdf',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
         'application/msword' => 'doc',

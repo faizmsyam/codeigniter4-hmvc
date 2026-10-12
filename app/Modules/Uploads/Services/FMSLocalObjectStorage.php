@@ -274,6 +274,7 @@ final class FMSLocalObjectStorage implements FMSObjectStorageInterface
     {
         return [
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'image/vnd.microsoft.icon', 'image/svg+xml',
             'application/pdf', 'text/plain', 'text/csv', 'text/html',
             'application/json', 'application/xml', 'text/markdown',
             'application/zip', 'application/gzip', 'application/vnd.rar',

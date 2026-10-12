@@ -131,3 +131,6 @@ _modules/*
 # Generated cryptographic keys — never commit private key material
 /writable/keys/*
 !/writable/keys/.gitkeep
+# env backups (berisi secrets)
+.env.bak*
+*.env.bak*
