@@ -444,7 +444,53 @@
       e.target.value = '';
     });
 
-    /* Drag & drop upload dari luar — file saja, tanpa folder */
+    /* Drag & drop: file DAN folder (webkit entries) — pertahankan struktur. */
+    function entryFile(entry) {
+      return new Promise(function (resolve) { entry.file(resolve, function () { resolve(null); }); });
+    }
+
+    function walkEntry(entry, basePrefix, out) {
+      return new Promise(function (resolve) {
+        if (entry.isFile) {
+          entryFile(entry).then(function (file) {
+            if (file) out.push({ file: file, prefix: basePrefix });
+            resolve();
+          });
+          return;
+        }
+        if (!entry.isDirectory) { resolve(); return; }
+        const dirPrefix = (basePrefix ? basePrefix + '/' : '') + safeSegment(entry.name);
+        const reader = entry.createReader();
+        const children = [];
+        (function readBatch() {
+          reader.readEntries(function (entries) {
+            if (!entries.length) {
+              Promise.all(children.map(function (child) { return walkEntry(child, dirPrefix, out); })).then(resolve);
+              return;
+            }
+            for (let i = 0; i < entries.length; i++) children.push(entries[i]);
+            readBatch();
+          }, function () { resolve(); });
+        })();
+      });
+    }
+
+    function safeSegment(name) {
+      return String(name || '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^[_-]+|[_-]+$/g, '') || 'folder';
+    }
+
+    function uploadEntries(entries) {
+      const collected = [];
+      Promise.all(entries.map(function (entry) {
+        if (entry.isFile) {
+          return entryFile(entry).then(function (file) {
+            if (file) collected.push({ file: file, prefix: currentPrefix });
+          });
+        }
+        return walkEntry(entry, currentPrefix, collected);
+      })).then(function () { return runQueue(collected); });
+    }
+
     if (dropzone) {
       ['dragenter', 'dragover'].forEach(function (eventName) {
         dropzone.addEventListener(eventName, function (e) {
@@ -464,9 +510,20 @@
         e.preventDefault();
         e.stopPropagation();
         dropzone.classList.remove('is-dragover');
-        const files = e.dataTransfer ? e.dataTransfer.files : null;
+        const transfer = e.dataTransfer;
+        if (!transfer) return;
+        const items = transfer.items;
+        if (items && items.length && typeof items[0].webkitGetAsEntry === 'function') {
+          const entries = [];
+          for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry();
+            if (entry) entries.push(entry);
+          }
+          if (entries.length) { uploadEntries(entries); return; }
+        }
+        const files = transfer.files;
         if (!files || !files.length) {
-          FMS.toast('Drop file saja (folder tidak didukung). Tarik file, bukan folder.', false);
+          FMS.toast('Tidak ada file terdeteksi pada drop.', false);
           return;
         }
         const collected = [];
@@ -838,6 +895,11 @@
         .catch(function (error) {
           FMS.toast((error && error.message) || 'Gagal menyimpan role.', false);
         });
+    });
+
+    /* Guard global: cegah browser menavigasi ke file/folder yang di-drop di luar dropzone. */
+    ['dragover', 'drop'].forEach(function (name) {
+      window.addEventListener(name, function (e) { e.preventDefault(); }, false);
     });
 
     load();

@@ -371,8 +371,11 @@ final class FMSStorageObjectService
         if ($prefix !== '' && preg_match('#^(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+$#', $prefix) !== 1) {
             throw new InvalidArgumentException('Prefix object tidak valid.');
         }
+        // Nama folder disanitasi: buang path, sisakan charset aman (samakan dengan safeSegment JS).
         $name = trim(str_replace(['\\', '/'], '-', $name));
-        if (preg_match('/^[A-Za-z0-9_-]{1,100}$/', $name) !== 1) {
+        $name = preg_replace('/[^A-Za-z0-9_-]+/', '_', $name) ?? '';
+        $name = trim($name, '_-');
+        if ($name === '' || strlen($name) > 100) {
             throw new InvalidArgumentException('Nama folder tidak valid.');
         }
 
@@ -407,7 +410,9 @@ final class FMSStorageObjectService
     {
         $safeKey = $this->safeKey($key);
         $newName = trim(str_replace(['\\', '/'], '-', $newName));
-        if (preg_match('/^[A-Za-z0-9._-]{1,200}$/', $newName) !== 1) {
+        $newName = preg_replace('/[^A-Za-z0-9._-]+/', '_', $newName) ?? '';
+        $newName = ltrim($newName, '._-');
+        if ($newName === '' || strlen($newName) > 200) {
             throw new InvalidArgumentException('Nama object baru tidak valid.');
         }
         $prefix = trim(str_replace('\\', '/', dirname($safeKey)), '.\\/');
@@ -430,10 +435,9 @@ final class FMSStorageObjectService
     {
         $prefix = trim(str_replace('\\', '/', $prefix), '/');
         $newName = trim(str_replace(['\\', '/'], '-', $newName));
-        if ($prefix === '' || preg_match('#^(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+$#', $prefix) !== 1) {
-            throw new InvalidArgumentException('Folder tidak valid.');
-        }
-        if (preg_match('/^[A-Za-z0-9_-]{1,100}$/', $newName) !== 1) {
+        $newName = preg_replace('/[^A-Za-z0-9_-]+/', '_', $newName) ?? '';
+        $newName = trim($newName, '_-');
+        if (preg_match('#^[A-Za-z0-9_-]+$#', $newName) !== 1 || strlen($newName) > 100) {
             throw new InvalidArgumentException('Nama folder baru tidak valid.');
         }
 
@@ -537,21 +541,15 @@ final class FMSStorageObjectService
     {
         // Normalize: backslash → forward slash, strip leading/trailing slashes.
         $key = trim(str_replace('\\', '/', $key), '/');
-        // Build pattern dari allowed extensions.
-        $allowedExtensions = [];
-        foreach ($this->storageConfig()->allowedMimeTypes() as $mime) {
-            $allowedExtensions[] = preg_quote($this->storageConfig()->extensionForMime($mime), '#');
-        }
-        $extPattern = implode('|', array_values(array_unique($allowedExtensions)));
-        if ($extPattern === '') {
-            $extPattern = '[^./]+';
-        }
-        // Key shape: [prefix/]filename.ext — segmen folder + nama file di akhir.
-        $pattern = '#^(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9._-]+\.(' . $extPattern . ')$#';
+        // Shape: [prefix/]filename.ext — charset aman, ekstensi token pendek.
+        // Keamanan konten dijaga MIME check (finfo) di upload(), bukan ekstensi.
+        $pattern = '#^(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+\.[A-Za-z0-9]{1,10}$#';
 
         if (
             $key === ''
             || strlen($key) > 512
+            || str_starts_with($key, '/')
+            || str_contains($key, '\\')
             || str_contains($key, '..')
             || str_contains($key, "\0")
             || preg_match($pattern, $key) !== 1
