@@ -27,9 +27,15 @@
       <aside class="fms-storage-sidebar border-end bg-body-tertiary p-3" id="fmsStorageSidebar" style="width:250px;">
         <div class="text-uppercase text-muted fw-semibold small mb-2">Storage</div>
         <nav class="nav nav-pills flex-column gap-1">
+          <?php if (!empty($canRead)): ?>
           <a class="nav-link <?= ($storagePage ?? '') === 'browser' ? 'active' : 'text-body' ?>" href="<?= esc(site_url('fms-storage'), 'attr') ?>"><i class="ph-duotone ph-folder-open me-2"></i>Object Browser</a>
+          <?php endif; ?>
+          <?php if (!empty($canManageSettings)): ?>
           <a class="nav-link <?= ($storagePage ?? '') === 'settings' ? 'active' : 'text-body' ?>" href="<?= esc(site_url('fms-storage/settings'), 'attr') ?>"><i class="ph-duotone ph-gear me-2"></i>Pengaturan</a>
-          <?php if (!empty($canManageUsers)): ?><a class="nav-link <?= ($storagePage ?? '') === 'users' ? 'active' : 'text-body' ?>" href="<?= esc(site_url('fms-storage/users'), 'attr') ?>"><i class="ph-duotone ph-users-three me-2"></i>Users &amp; Access</a><?php endif; ?>
+          <?php endif; ?>
+          <?php if (!empty($canManageUsers)): ?>
+          <a class="nav-link <?= ($storagePage ?? '') === 'users' ? 'active' : 'text-body' ?>" href="<?= esc(site_url('fms-storage/users'), 'attr') ?>"><i class="ph-duotone ph-users-three me-2"></i>Users &amp; Access</a>
+          <?php endif; ?>
         </nav>
         <hr>
         <div class="small text-muted"><div class="fw-semibold mb-1">Storage session</div><div class="d-flex justify-content-between"><span>Status</span><span class="text-success">Aktif</span></div></div>

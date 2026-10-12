@@ -21,7 +21,11 @@ final class FMSStorageBackendController extends FMSController
 
         $data['appBrand'] = $this->appBrand;
         $data['meta'] = $this->getMeta();
-        $data['canManageUsers'] = (new FMSStorageAuthorizationService())->allows($data['storageUser'] ?? null, FMSStorageAuthorizationService::USERS);
+        $auth = new FMSStorageAuthorizationService();
+        $storageUser = $data['storageUser'] ?? null;
+        $data['canRead'] = $auth->allows($storageUser, FMSStorageAuthorizationService::READ);
+        $data['canManageSettings'] = $auth->allows($storageUser, FMSStorageAuthorizationService::SETTINGS);
+        $data['canManageUsers'] = $auth->allows($storageUser, FMSStorageAuthorizationService::USERS);
         $data['content'] = view('App\\Modules\\Storage\\Views\\backend\\'.$view, $data);
         $data['fmsLinks'] = $this->getFmsLinks();
         $data['fmsScripts'] = $this->getFmsScripts();
@@ -30,16 +34,28 @@ final class FMSStorageBackendController extends FMSController
         return view('App\\Modules\\Storage\\Views\\layout', $data);
     }
 
-    public function index(): string
+    public function index(): string|RedirectResponse
     {
         $user = (new FMSStorageSessionService())->resolve((string) $this->request->getCookie(FMSStorageSessionService::COOKIE_NAME));
+        if (!(new FMSStorageAuthorizationService())->allows($user, FMSStorageAuthorizationService::READ)) {
+            $target = (new FMSStorageAuthorizationService())->allows($user, FMSStorageAuthorizationService::SETTINGS)
+                ? site_url('fms-storage/settings')
+                : site_url('fms-storage/logout');
+            return redirect()->to($target);
+        }
         $this->fmsMeta(['title' => 'FMS Storage']);
         return $this->storageLayout('index', ['storageUser' => $user, 'storagePage' => 'browser']);
     }
 
-    public function settings(): string
+    public function settings(): string|RedirectResponse
     {
         $user = (new FMSStorageSessionService())->resolve((string) $this->request->getCookie(FMSStorageSessionService::COOKIE_NAME));
+        if (!(new FMSStorageAuthorizationService())->allows($user, FMSStorageAuthorizationService::SETTINGS)) {
+            $target = (new FMSStorageAuthorizationService())->allows($user, FMSStorageAuthorizationService::READ)
+                ? site_url('fms-storage')
+                : site_url('fms-storage/logout');
+            return redirect()->to($target);
+        }
         $this->fmsMeta(['title' => 'FMS Storage Settings']);
         return $this->storageLayout('settings', ['storageUser' => $user, 'storagePage' => 'settings']);
     }

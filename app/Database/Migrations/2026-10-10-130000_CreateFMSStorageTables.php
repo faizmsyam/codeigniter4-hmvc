@@ -140,7 +140,7 @@ final class CreateFMSStorageTables extends Migration
             $storageUser = $db->table('storage_users')->where('username', 'faizmsyam')->get(1)->getRowArray();
         }
 
-        $permissions = ['storage.read', 'storage.upload', 'storage.edit', 'storage.delete', 'storage.share', 'storage.users'];
+        $permissions = ['storage.read', 'storage.upload', 'storage.edit', 'storage.delete', 'storage.share', 'storage.users', 'storage.settings'];
         foreach ($permissions as $permission) {
             if ($db->table('storage_permissions')->where('permission_key', $permission)->countAllResults() === 0) {
                 $db->table('storage_permissions')->insert([

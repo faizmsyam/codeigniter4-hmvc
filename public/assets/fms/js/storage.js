@@ -751,42 +751,21 @@
 
     function renderRoleCheckboxes(container, selected) {
       container.innerHTML = '';
-      const roles = Array.isArray(state.roles) ? state.roles : [];
+      /* super_admin adalah system role: tidak pernah assignable lewat checkbox,
+         selalu disembunyikan dari modal Tambah/Edit User. */
+      const roles = (Array.isArray(state.roles) ? state.roles : []).filter(function (r) { return r.name !== 'super_admin'; });
       if (!roles.length) {
-        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role baru di kartu <strong>Storage Roles</strong>.</div>';
+        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role baru di kartu <strong>Storage Roles</strong> terlebih dahulu.</div>';
         return;
       }
-
-      /* super_admin hanya tampil saat edit user yang sudah super_admin (disabled, terkunci).
-         Saat Tambah User baru — super_admin tidak pernah ditampilkan. */
-      const isSuper = editingUserId !== null && selected.indexOf(1) !== -1;
-      const shown = roles.filter(function (r) { return r.name !== 'super_admin' || isSuper; });
-      const assignable = shown.filter(function (r) { return r.name !== 'super_admin'; });
-
-      if (!shown.length) {
-        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role baru di kartu <strong>Storage Roles</strong>.</div>';
-        return;
-      }
-
-      shown.forEach(function (r) {
-        const isSuperRole = r.name === 'super_admin';
+      roles.forEach(function (r) {
         const div = document.createElement('div');
         div.className = 'form-check';
-        /* super_admin role: disabled + checked, tidak bisa diubah */
         div.innerHTML = '<input class="form-check-input" type="checkbox" value="' + r.id + '" id="role-' + r.id + '"'
-          + (isSuperRole || selected.indexOf(r.id) !== -1 ? ' checked' : '')
-          + (isSuperRole ? ' disabled' : '') + '>'
-          + '<label class="form-check-label' + (isSuperRole ? ' text-muted' : '') + '" for="role-' + r.id + '">' + esc(r.name)
-          + (isSuperRole ? ' <span class="badge bg-danger-subtle text-danger ms-1">terkunci</span>' : '') + '</label>';
+          + (selected.indexOf(r.id) !== -1 ? ' checked' : '') + '>'
+          + '<label class="form-check-label" for="role-' + r.id + '">' + esc(r.name) + '</label>';
         container.appendChild(div);
       });
-
-      if (!assignable.length && !isSuper) {
-        const hint = document.createElement('div');
-        hint.className = 'text-muted small mt-1';
-        hint.textContent = 'Belum ada role. Buat role baru di kartu Storage Roles untuk memberi akses.';
-        container.appendChild(hint);
-      }
     }
 
     function renderPermissionCheckboxes(container, selected) {

@@ -9,6 +9,18 @@ final class FMSStorageAuthorizationService
     public const DELETE = 'storage.delete';
     public const SHARE = 'storage.share';
     public const USERS = 'storage.users';
+    public const SETTINGS = 'storage.settings';
+
+    /**
+     * Daftar seluruh permission yang dikenali modul Storage.
+     * Dipakai untuk seeding, validasi role, dan checklist di UI.
+     *
+     * @return list<string>
+     */
+    public static function all(): array
+    {
+        return [self::READ, self::UPLOAD, self::EDIT, self::DELETE, self::SHARE, self::USERS, self::SETTINGS];
+    }
 
     public function allows(?array $user, string $permission): bool
     {
