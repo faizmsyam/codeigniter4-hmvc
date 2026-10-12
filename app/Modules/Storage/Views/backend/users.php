@@ -72,7 +72,13 @@
           <div class="mb-3"><label class="form-label" for="fmsStorageUserUsername">Username</label><input class="form-control" id="fmsStorageUserUsername" name="username" required></div>
           <div class="mb-3"><label class="form-label" for="fmsStorageUserFullName">Nama</label><input class="form-control" id="fmsStorageUserFullName" name="full_name"></div>
           <div class="mb-3"><label class="form-label" for="fmsStorageUserEmail">Email</label><input class="form-control" id="fmsStorageUserEmail" name="email" type="email"></div>
-          <div class="mb-3"><label class="form-label" for="fmsStorageUserPassword">Password</label><input class="form-control" id="fmsStorageUserPassword" name="password" type="password"><small class="text-muted">Minimal 12 karakter</small></div>
+          <div class="mb-3"><label class="form-label" for="fmsStorageUserPassword">Password</label>
+            <div class="input-group">
+              <input class="form-control" id="fmsStorageUserPassword" name="password" type="password" autocomplete="new-password">
+              <button class="btn btn-outline-secondary" type="button" data-fms-password-toggle="fmsStorageUserPassword" aria-label="Tampilkan password" title="Tampilkan password"><i class="ph-duotone ph-eye"></i></button>
+            </div>
+            <small class="text-muted">Minimal 12 karakter</small>
+          </div>
           <div class="mb-3"><label class="form-label" for="fmsStorageUserStatus">Status</label><select class="form-select" id="fmsStorageUserStatus" name="status"><option value="active">Aktif</option><option value="suspended">Suspend</option></select></div>
           <div class="mb-2"><label class="form-label">Role</label><div id="fmsStorageUserRoles" class="d-flex flex-column gap-1"></div></div>
         </form>

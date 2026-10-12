@@ -35,6 +35,7 @@
           <?php endif; ?>
           <?php if (!empty($canManageUsers)): ?>
           <a class="nav-link <?= ($storagePage ?? '') === 'users' ? 'active' : 'text-body' ?>" href="<?= esc(site_url('fms-storage/users'), 'attr') ?>"><i class="ph-duotone ph-users-three me-2"></i>Users &amp; Access</a>
+          <a class="nav-link <?= ($storagePage ?? '') === 'audit' ? 'active' : 'text-body' ?>" href="<?= esc(site_url('fms-storage/audit'), 'attr') ?>"><i class="ph-duotone ph-clipboard-text me-2"></i>Activity Log</a>
           <?php endif; ?>
         </nav>
         <hr>
@@ -48,6 +49,8 @@
               <li class="breadcrumb-item"><a href="<?= esc(site_url('fms-storage'), 'attr') ?>"><i class="ph-duotone ph-hard-drives me-1"></i>FMS Storage</a></li>
               <?php if (($storagePage ?? 'browser') === 'users'): ?>
                 <li class="breadcrumb-item active" aria-current="page">Users &amp; Access</li>
+              <?php elseif (($storagePage ?? 'browser') === 'audit'): ?>
+                <li class="breadcrumb-item active" aria-current="page">Activity Log</li>
               <?php elseif (($storagePage ?? 'browser') === 'settings'): ?>
                 <li class="breadcrumb-item active" aria-current="page">Pengaturan</li>
               <?php else: ?>

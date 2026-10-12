@@ -77,4 +77,14 @@ final class FMSStorageBackendController extends FMSController
         $this->fmsMeta(['title' => 'FMS Storage Users']);
         return $this->storageLayout('users', ['storageUser' => $user, 'storagePage' => 'users']);
     }
+
+    public function audit(): string|RedirectResponse
+    {
+        $user = (new FMSStorageSessionService())->resolve((string) $this->request->getCookie(FMSStorageSessionService::COOKIE_NAME));
+        if (!(new FMSStorageAuthorizationService())->allows($user, FMSStorageAuthorizationService::USERS)) {
+            return redirect()->to(site_url('fms-storage'));
+        }
+        $this->fmsMeta(['title' => 'FMS Storage Activity Log']);
+        return $this->storageLayout('audit', ['storageUser' => $user, 'storagePage' => 'audit']);
+    }
 }

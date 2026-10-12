@@ -11,4 +11,5 @@ $routes->group('fms-storage', ['filter' => 'fms-storage-authentication'], static
     $routes->get('/', [FMSStorageBackendController::class, 'index'], ['as' => 'fms.storage.index']);
     $routes->get('settings', [FMSStorageBackendController::class, 'settings'], ['as' => 'fms.storage.settings']);
     $routes->get('users', [FMSStorageBackendController::class, 'users'], ['as' => 'fms.storage.users']);
+    $routes->get('audit', [FMSStorageBackendController::class, 'audit'], ['as' => 'fms.storage.audit']);
 });
