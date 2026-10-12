@@ -217,7 +217,12 @@ final class FMSStorageObjectService
             );
         }
 
-        $name = $file->getClientName() ?: 'object';
+        // Nama asli tanpa path: buang komponen direktori (webkitRelativePath bisa "folder\file.txt").
+        $name = str_replace('\\', '/', $file->getClientName() ?: 'object');
+        $name = basename($name);
+        // Buang karakter yang tidak aman di key: sisakan huruf/angka/._-
+        $name = preg_replace('/[^A-Za-z0-9._-]+/', '_', $name) ?: 'object';
+        $name = ltrim($name, '.') ?: 'object';
         $extension = $storage->extensionForMime($mime);
 
         $keyPrefix = trim(str_replace('\\', '/', $prefix), '/');
@@ -402,11 +407,11 @@ final class FMSStorageObjectService
     {
         $safeKey = $this->safeKey($key);
         $newName = trim(str_replace(['\\', '/'], '-', $newName));
-        if (preg_match('/^[A-Za-z0-9_-]{1,200}\.[A-Za-z0-9]{1,20}$/', $newName) !== 1) {
+        if (preg_match('/^[A-Za-z0-9._-]{1,200}$/', $newName) !== 1) {
             throw new InvalidArgumentException('Nama object baru tidak valid.');
         }
-        $prefix = trim(str_replace('\\', '/', dirname($safeKey)), '.\/');
-        $newKey = ($prefix !== '' ? $prefix . '/' : '') . 'fms-' . bin2hex(random_bytes(12)) . '-' . $newName;
+        $prefix = trim(str_replace('\\', '/', dirname($safeKey)), '.\\/');
+        $newKey = ($prefix !== '' ? $prefix . '/' : '') . $newName;
         $object = $this->storage()->readObject($safeKey);
         $temporary = tempnam(sys_get_temp_dir(), 'fms-storage-');
         if ($temporary === false || file_put_contents($temporary, $object['body'], LOCK_EX) === false) {
@@ -477,7 +482,7 @@ final class FMSStorageObjectService
             throw new InvalidArgumentException('Prefix tujuan tidak valid.');
         }
         $object = $this->storage()->readObject($safeKey);
-        $newKey = ($targetPrefix !== '' ? $targetPrefix . '/' : '') . 'fms-' . bin2hex(random_bytes(12)) . '-' . basename($safeKey);
+        $newKey = ($targetPrefix !== '' ? $targetPrefix . '/' : '') . basename($safeKey);
         $temporary = tempnam(sys_get_temp_dir(), 'fms-storage-');
         if ($temporary === false || file_put_contents($temporary, $object['body'], LOCK_EX) === false) {
             throw new InvalidArgumentException('Object sementara gagal dibuat.');
@@ -530,13 +535,19 @@ final class FMSStorageObjectService
 
     private function safeKey(string $key): string
     {
+        // Normalize: backslash → forward slash, strip leading/trailing slashes.
         $key = trim(str_replace('\\', '/', $key), '/');
+        // Build pattern dari allowed extensions.
         $allowedExtensions = [];
         foreach ($this->storageConfig()->allowedMimeTypes() as $mime) {
             $allowedExtensions[] = preg_quote($this->storageConfig()->extensionForMime($mime), '#');
         }
-        $extensionPattern = implode('|', array_values(array_unique($allowedExtensions)));
-        $pattern = '#^(?:[A-Za-z0-9_-]+/)*fms-[A-Za-z0-9_-]{1,200}' . chr(92) . '.' . '(' . ($extensionPattern !== '' ? $extensionPattern : 'bin') . ')$#';
+        $extPattern = implode('|', array_values(array_unique($allowedExtensions)));
+        if ($extPattern === '') {
+            $extPattern = '[^./]+';
+        }
+        // Key shape: [prefix/]filename.ext — segmen folder + nama file di akhir.
+        $pattern = '#^(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9._-]+\.(' . $extPattern . ')$#';
 
         if (
             $key === ''

@@ -64,7 +64,7 @@ final class FMSPrivateUploadService
             || strlen($normalizedObjectKey) > 512
             || str_contains($normalizedObjectKey, "\0")
             || str_contains($normalizedObjectKey, '..')
-            || preg_match('#\A(?:fms-[a-z0-9][a-z0-9-]{0,62}/)+fms-[A-Za-z0-9-]{1,200}\.(' . $extPattern . ')\z#', $normalizedObjectKey) !== 1
+            || preg_match('#\A(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+\.(' . $extPattern . ')\z#', $normalizedObjectKey) !== 1
         ) {
             throw new InvalidArgumentException('Private upload object key is invalid.');
         }
