@@ -21,17 +21,19 @@ $can = static fn(string $permission): bool => in_array('*', $permissions, true) 
           </div>
         </div>
         <div class="card-header d-flex flex-column flex-sm-row justify-content-end gap-2">
-          <div class="input-group" style="width:150px">
-            <span class="input-group-text">Baris</span>
-            <select id="activityLogsLimit" class="form-select">
-              <option value="10" selected>10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
+          <div class="w-100 w-sm-auto">
+            <input type="text" class="form-control" id="activityLogsDateRange" placeholder="Search By Date Range">
           </div>
-          <div class="form-group">
-            <input type="text" class="form-control breadcrumb-input" id="activityLogsDateRange" placeholder="Search By Date Range">
+          <div class="w-100 w-sm-auto">
+            <div class="input-group">
+              <span class="input-group-text">Baris</span>
+              <select id="activityLogsLimit" class="form-select">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="card-body p-0">

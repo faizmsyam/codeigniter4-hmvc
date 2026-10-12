@@ -20,9 +20,10 @@ final class FMSJwt extends BaseConfig
     public string $audience = 'fms-client';
 
     /**
-     * Access token hanya berumur pendek.
+     * Access token berumur pendek namun cukup untuk sesi kerja admin.
+     * Refresh token tetap 14 hari; auto-refresh di fms.js menangani perpanjangan.
      */
-    public int $accessTokenTtlSeconds = 600;
+    public int $accessTokenTtlSeconds = 3600;
 
     /**
      * Refresh token opaque dengan umur terbatas.
