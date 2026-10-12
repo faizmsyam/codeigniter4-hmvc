@@ -49,13 +49,13 @@ CI_ENVIRONMENT = development
 # database.tests.port = 3306
 
 #--------------------------------------------------------------------
-# ENCRYPTION
+# ENCRYPTION & ID OBFUSCATION
 #--------------------------------------------------------------------
 
 # encryption.key =
 
-# FMS_HASHIDS_SALT=FMS-2026-fmsprojects.my.id-ID-Obfuscation-9c7b4e2a
-# FMS_HASHIDS_MIN_LENGTH=12
+FMS_HASHIDS_SALT=FMS-2026-fmsprojects.my.id-ID-Obfuscation-9c7b4e2a
+FMS_HASHIDS_MIN_LENGTH=12
 
 #--------------------------------------------------------------------
 # SESSION

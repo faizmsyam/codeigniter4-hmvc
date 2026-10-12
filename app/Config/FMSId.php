@@ -10,12 +10,15 @@ class FMSId extends BaseConfig
      * Salt for encrypting auto-increment IDs.
      * MUST NOT CHANGE once data is in production.
      */
-    public string $hashidsSalt = '';
+    public string $hashidsSalt = 'FMS-2026-fmsprojects.my.id-ID-Obfuscation-9c7b4e2a';
 
     public function __construct()
     {
         parent::__construct();
-        $this->hashidsSalt = (string) env('FMS_HASHIDS_SALT', '');
+        $envSalt = (string) env('FMS_HASHIDS_SALT', '');
+        if ($envSalt !== '') {
+            $this->hashidsSalt = $envSalt;
+        }
         $this->hashidsMinLength = (int) env('FMS_HASHIDS_MIN_LENGTH', 12);
     }
 

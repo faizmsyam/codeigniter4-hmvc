@@ -23,10 +23,11 @@ final class FMSKeysGuard
         }
 
         throw new \RuntimeException(sprintf(
-            "Key kriptografi FMS tidak ditemukan:\n  - %s\n"
-            . "Jalankan perintah berikut di root project:\n"
+            "Konfigurasi Kunci / Salt FMS tidak lengkap:\n  - %s\n"
+            . "Pastikan FMS_HASHIDS_SALT diaktifkan di .env dan jalankan generate keys:\n"
             . "  php spark fms:keys:generate --scope=response\n"
-            . "  php spark fms:keys:generate --scope=jwt",
+            . "  php spark fms:keys:generate --scope=jwt\n"
+            . "  php spark fms:encryption:generate",
             implode("\n  - ", $missing)
         ));
     }
@@ -38,6 +39,7 @@ final class FMSKeysGuard
     {
         $apiConfig = config(FMSApi::class);
         $jwtConfig = config(FMSJwt::class);
+        $idConfig  = config(\App\Config\FMSId::class);
 
         $requiredKeys = [
             'Response signing private key (fms-response-private.key)' => $apiConfig->responseSigningPrivateKeyPath,
@@ -47,6 +49,10 @@ final class FMSKeysGuard
         ];
 
         $missing = [];
+
+        if (strlen($idConfig->hashidsSalt) < 32) {
+            $missing[] = 'FMS_HASHIDS_SALT di .env belum diatur atau kurang dari 32 karakter (Wajib diaktifkan)';
+        }
 
         foreach ($requiredKeys as $label => $path) {
             if ($path === '' || ! is_file($path)) {
