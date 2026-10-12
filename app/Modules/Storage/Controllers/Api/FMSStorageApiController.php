@@ -151,11 +151,11 @@ final class FMSStorageApiController extends FMSController
     public function settings(): ResponseInterface
     {
         if (! $this->allowed(FMSStorageAuthorizationService::USERS)) return $this->deny();
-        $service = new \App\Modules\Storage\Services\FMSStorageSettingsService();
+        $svc = new \App\Modules\Storage\Services\FMSStorageSettingsService();
         return $this->json(['status' => true, 'data' => [
-            'available_mime_types' => array_values($service->availableMimeTypes()),
-            'allowed_mime_types' => config(FMSStorage::class)->allowedMimeTypes(),
-            'maximum_upload_bytes' => config(\App\Config\FMSUploads::class)->maximumInputBytes(),
+            'available_mime_types' => array_values($svc->availableMimeTypes()),
+            'allowed_mime_types'  => config(FMSStorage::class)->allowedMimeTypes(),
+            'storage_config'       => $svc->allMasked(),
         ]]);
     }
 
@@ -163,15 +163,43 @@ final class FMSStorageApiController extends FMSController
     {
         if (! $this->allowed(FMSStorageAuthorizationService::USERS)) return $this->deny();
         $data = $this->request->getJSON(true) ?: $this->request->getPost();
-        $mimeTypes = $data['allowed_mime_types'] ?? [];
-        if (! is_array($mimeTypes)) $mimeTypes = [];
-        try {
-            $saved = (new \App\Modules\Storage\Services\FMSStorageSettingsService())->saveAllowedMimeTypes($mimeTypes);
-            (new FMSStorageAuditService())->log($this->user(), 'settings.mime', null, ['allowed' => $saved], (string) $this->request->getIPAddress());
-            return $this->json(['status' => true, 'data' => ['allowed_mime_types' => $saved]]);
-        } catch (Throwable $e) {
-            return $this->json(['status' => false, 'message' => $e->getMessage()], 422);
+        $svc = new \App\Modules\Storage\Services\FMSStorageSettingsService();
+        $savedKeys = [];
+
+        // ── MIME whitelist ──────────────────────────────────────
+        if (isset($data['allowed_mime_types'])) {
+            $mimeTypes = $data['allowed_mime_types'];
+            if (! is_array($mimeTypes)) $mimeTypes = [];
+            $svc->saveAllowedMimeTypes($mimeTypes);
+            $savedKeys[] = 'allowed_mime_types';
         }
+
+        // ── Storage config (driver, path, S3, dll.) ────────────
+        if (isset($data['storage_config']) && is_array($data['storage_config'])) {
+            foreach ($data['storage_config'] as $key => $value) {
+                // Jangan simpan secret fields kosong (atau placeholder) —
+                // jika field secret tidak di-send, skip; jika '********', skip.
+                $secretFields = ['s3_secret_access_key', 'local_hmac_key', 'local_hmac_prev_key'];
+                if (in_array($key, $secretFields, true)) {
+                    if ($value === '' || $value === '********') continue; // skip, keep old value
+                }
+                $svc->set($key, (string) $value);
+                $savedKeys[] = $key;
+            }
+        }
+
+        (new FMSStorageAuditService())->log(
+            $this->user(),
+            'settings.update',
+            null,
+            ['saved' => array_unique($savedKeys)],
+            (string) $this->request->getIPAddress()
+        );
+
+        return $this->json(['status' => true, 'data' => [
+            'allowed_mime_types' => $svc->allowedMimeTypes(),
+            'storage_config'     => $svc->allMasked(),
+        ]]);
     }
 
     public function profile(): ResponseInterface
@@ -179,12 +207,11 @@ final class FMSStorageApiController extends FMSController
         $user = $this->user();
         if (! $user) return $this->json(['status' => false], 401);
         unset($user['password_hash']);
-        $storageConfig = config(FMSStorage::class);
-        $uploadsConfig = config(\App\Config\FMSUploads::class);
+        $svc = new \App\Modules\Storage\Services\FMSStorageSettingsService();
         return $this->json(['status' => true, 'data' => [
             'user' => $user,
-            'allowed_mime_types' => $storageConfig->allowedMimeTypes(),
-            'maximum_upload_bytes' => $uploadsConfig->maximumInputBytes(),
+            'allowed_mime_types' => $svc->allowedMimeTypes(),
+            'storage_config'     => $svc->allMasked(),
         ]]);
     }
 

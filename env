@@ -82,28 +82,30 @@ CI_ENVIRONMENT = development
 # FMSApiSecurity.csrfCookieName = fms_csrf
 
 #--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+
+# logger.threshold = 4
+
+#--------------------------------------------------------------------
 # FMS UPLOAD / PRIVATE OBJECT STORAGE
 #--------------------------------------------------------------------
 # Driver: local (bucket folder outside public web root) or s3.
 # fmsuploads.storageDriver = local
 
 # Local bucket root must be an absolute path outside public/.
-# fmsuploads.storageRoot = /absolute/path/to/writable/uploads/fms-buckets
 # fmsuploads.bucketName = fms-private
 # fmsuploads.objectKeyPrefix = fms-uploads
 # fmsuploads.createBucketAutomatically = true
-# Allowed MIME types, comma-separated. Empty = all FMSUploads.allowedFileTypes.
-# fmsuploads.allowedMimeTypes = image/webp,application/pdf
 
 # HMAC signing key for local presigned downloads. Minimum 32 bytes.
 # Generate: php -r "echo bin2hex(random_bytes(32));"
 # fmsuploads.localDownloadHmacKey =
 # fmsuploads.localDownloadHmacKeyIdentifier = fms-download-2026-01
+
 # Optional previous key during bounded rotation window.
 # fmsuploads.localDownloadPreviousHmacKey =
 # fmsuploads.localDownloadPreviousHmacKeyIdentifier =
-# Public origin that serves the signed download route.
-# fmsuploads.localDownloadEndpoint = http://localhost:8080/api/v1/uploads
 
 # fmsuploads.presignedUrlTtlSeconds = 300
 # fmsuploads.presignedUrlMaximumTtlSeconds = 900
@@ -125,5 +127,3 @@ CI_ENVIRONMENT = development
 # fmsuploads.maximumDecodedBytes = 134217728
 # fmsuploads.webPQuality = 82
 # fmsuploads.maximumFilesPerRequest = 10
-# fmsuploads.cwebpBinary = /usr/local/bin/cwebp
-# fmsuploads.dwebpBinary = /usr/local/bin/dwebp

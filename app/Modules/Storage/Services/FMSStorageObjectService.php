@@ -13,7 +13,10 @@ final class FMSStorageObjectService
     public function __construct(
         private readonly ?FMSStorage $storageConfig = null,
         private readonly ?FMSUploads $uploadsConfig = null,
-    ) {}
+    ) {
+        /* NULL default: resolve runtime dengan DB overrides (storage_settings).
+           Semua nilai .env lama kini dibaca dari DB agar single source of truth. */
+    }
 
     private function storageConfig(): FMSStorage
     {
@@ -22,7 +25,17 @@ final class FMSStorageObjectService
 
     private function uploadsConfig(): FMSUploads
     {
-        return $this->uploadsConfig ?? config(FMSUploads::class);
+        if ($this->uploadsConfig !== null) {
+            return $this->uploadsConfig;
+        }
+        /* Clone agar mutasi overrides tidak mencemari singleton config global. */
+        $config = clone config(FMSUploads::class);
+        try {
+            (new \App\Modules\Storage\Services\FMSStorageSettingsService())->applyTo($config);
+        } catch (\Throwable $e) {
+            /* DB belum siap — pakai default config saja. */
+        }
+        return $config;
     }
 
     public function list(

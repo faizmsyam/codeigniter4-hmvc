@@ -10,7 +10,18 @@ final class FMSObjectStorageFactory
 {
     public static function create(?FMSUploads $configuration = null): FMSObjectStorageInterface
     {
-        $resolvedConfiguration = $configuration ?? config(FMSUploads::class);
+        if ($configuration !== null) {
+            $resolvedConfiguration = $configuration;
+        } else {
+            /* Clone singleton lalu inject overrides dari storage_settings,
+               supaya driver/root/bucket/S3 mengikuti nilai UI Settings. */
+            $resolvedConfiguration = clone config(FMSUploads::class);
+            try {
+                (new \App\Modules\Storage\Services\FMSStorageSettingsService())->applyTo($resolvedConfiguration);
+            } catch (\Throwable $e) {
+                /* DB belum siap — pakai default config saja. */
+            }
+        }
 
         return match (strtolower(trim($resolvedConfiguration->storageDriver))) {
             'local' => new FMSLocalObjectStorage(

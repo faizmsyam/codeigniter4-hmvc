@@ -159,6 +159,77 @@
   if (root) initBrowser(root);
   if (usersRoot) initUsers(usersRoot);
   initMimeSettings();
+  initStorageConfig();
+
+  /* ── Konfigurasi Storage (driver, path, S3) — baca/tulis storage_settings ── */
+  function initStorageConfig() {
+    const card = document.getElementById('fmsStorageConfigRoot');
+    if (!card) return;
+    const url = card.dataset.settingsUrl;
+    const el = function (id) { return document.getElementById(id); };
+    const noteEl = el('fmsStorageConfigNote');
+
+    function toggleDriver() {
+      const isS3 = el('fmsStorageDriver').value === 's3';
+      el('fmsStorageS3Fields').style.display = isS3 ? '' : 'none';
+      el('fmsStorageLocalFields').style.display = isS3 ? 'none' : '';
+    }
+
+    function load() {
+      FMS.get(url, {}, { blockUI: true })
+        .then(function (result) {
+          const cfg = (result && result.storage_config) || {};
+          el('fmsStorageDriver').value = cfg.storage_driver || 'local';
+          el('fmsStorageCfgRoot').value = cfg.storage_root || '';
+          el('fmsStorageCfgBucket').value = cfg.bucket_name || '';
+          el('fmsStorageCfgPrefix').value = cfg.object_key_prefix || '';
+          el('fmsStorageS3Region').value = cfg.s3_region || '';
+          el('fmsStorageS3Endpoint').value = cfg.s3_endpoint_host || '';
+          el('fmsStorageS3Key').value = cfg.s3_access_key_id || '';
+          el('fmsStorageS3Secret').value = '';   /* secret tidak pernah ditampilkan */
+          el('fmsStorageS3PathStyle').checked = (cfg.s3_path_style === 'true' || cfg.s3_path_style === true || cfg.s3_path_style === '1');
+          el('fmsStorageS3UseTls').checked = (cfg.s3_use_tls === 'true' || cfg.s3_use_tls === true || cfg.s3_use_tls === '1');
+          toggleDriver();
+          noteEl.textContent = 'Driver aktif: ' + (cfg.storage_driver || 'local');
+        })
+        .catch(function (error) {
+          FMS.toast((error && error.message) || 'Gagal memuat konfigurasi storage.', false);
+        });
+    }
+
+    el('fmsStorageDriver').addEventListener('change', toggleDriver);
+
+    el('fmsStorageConfigSave').addEventListener('click', function () {
+      const payload = {
+        storage_config: {
+          storage_driver: el('fmsStorageDriver').value,
+          storage_root: el('fmsStorageCfgRoot').value,
+          bucket_name: el('fmsStorageCfgBucket').value,
+          object_key_prefix: el('fmsStorageCfgPrefix').value,
+          s3_region: el('fmsStorageS3Region').value,
+          s3_endpoint_host: el('fmsStorageS3Endpoint').value,
+          s3_access_key_id: el('fmsStorageS3Key').value,
+          s3_path_style: el('fmsStorageS3PathStyle').checked ? 'true' : 'false',
+          s3_use_tls: el('fmsStorageS3UseTls').checked ? 'true' : 'false'
+        }
+      };
+      /* Secret hanya dikirim kalau benar-benar diisi. */
+      const secret = el('fmsStorageS3Secret').value;
+      if (secret) payload.storage_config.s3_secret_access_key = secret;
+
+      FMS.post(url, payload, { blockUI: true })
+        .then(function () {
+          FMS.toast('Konfigurasi storage disimpan.', true);
+          load();
+        })
+        .catch(function (error) {
+          FMS.toast((error && error.message) || 'Gagal menyimpan konfigurasi.', false);
+        });
+    });
+
+    el('fmsStorageConfigReload').addEventListener('click', load);
+    load();
+  }
 
   /* Sidebar off-canvas (mobile): toggle + backdrop + auto-close saat resize ke desktop. */
   (function initSidebarToggle() {
@@ -219,6 +290,9 @@
   function initBrowser(root) {
     const api = root.dataset.apiUrl;
     const body = document.getElementById('fmsStorageObjects');
+    /* Guard: initBrowser butuh element inti Object Browser.
+       Kalau tidak ada (mis. halaman Settings/Users), keluar diam-diam. */
+    if (!body || !api) return;
     const breadcrumb = document.getElementById('fmsStorageBreadcrumb');
     const bucketName = document.getElementById('fmsStorageBucketName');
     const uploadInput = document.getElementById('fmsStorageFile');
@@ -432,12 +506,14 @@
       instance.show();
     }
 
-    breadcrumb.addEventListener('click', function (e) {
-      if (e.target.tagName === 'A' && e.target.dataset.prefix !== undefined) {
-        e.preventDefault();
-        load(e.target.dataset.prefix);
-      }
-    });
+    if (breadcrumb) {
+      breadcrumb.addEventListener('click', function (e) {
+        if (e.target.tagName === 'A' && e.target.dataset.prefix !== undefined) {
+          e.preventDefault();
+          load(e.target.dataset.prefix);
+        }
+      });
+    }
 
     const searchInput = document.getElementById('fmsStorageSearch');
     const sortSelect = document.getElementById('fmsStorageSort');

@@ -34,6 +34,82 @@
 
   <?php if (!empty($canManageUsers)): ?>
   <div class="col-lg-8">
+    <div class="card custom-card mt-3" id="fmsStorageConfigRoot" data-settings-url="<?= esc(site_url('api/v1/storage/settings'), 'attr') ?>">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Konfigurasi Storage</h5>
+        <button class="btn btn-light btn-sm" type="button" id="fmsStorageConfigReload" title="Muat ulang" aria-label="Muat ulang"><i class="ph-duotone ph-arrows-clockwise"></i></button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">Pengaturan ini menggantikan konfigurasi <code>.env</code>. Driver, path, dan kredensial S3 dibaca dari sini.</p>
+
+        <div class="mb-3">
+          <label class="form-label" for="fmsStorageDriver">Driver Storage</label>
+          <select class="form-select" id="fmsStorageDriver">
+            <option value="local">Local (filesystem)</option>
+            <option value="s3">S3 (object storage)</option>
+          </select>
+        </div>
+
+        <div id="fmsStorageLocalFields">
+          <div class="mb-3">
+            <label class="form-label" for="fmsStorageCfgRoot">Storage Root</label>
+            <input class="form-control" id="fmsStorageCfgRoot" placeholder="/absolute/path/to/writable/uploads/fms-buckets">
+            <small class="text-muted">Path absolut direktori penampung bucket.</small>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label" for="fmsStorageCfgBucket">Bucket Name</label>
+            <input class="form-control" id="fmsStorageCfgBucket" placeholder="fms-private">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label" for="fmsStorageCfgPrefix">Object Key Prefix</label>
+            <input class="form-control" id="fmsStorageCfgPrefix" placeholder="fms-uploads">
+          </div>
+        </div>
+
+        <div id="fmsStorageS3Fields" style="display:none;">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="fmsStorageS3Region">S3 Region</label>
+              <input class="form-control" id="fmsStorageS3Region" placeholder="us-east-1">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="fmsStorageS3Endpoint">S3 Endpoint Host</label>
+              <input class="form-control" id="fmsStorageS3Endpoint" placeholder="s3.amazonaws.com">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="fmsStorageS3Key">S3 Access Key ID</label>
+              <input class="form-control" id="fmsStorageS3Key" placeholder="AKIA...">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label" for="fmsStorageS3Secret">S3 Secret Access Key</label>
+              <input class="form-control" id="fmsStorageS3Secret" type="password" placeholder="(tidak berubah)">
+              <small class="text-muted">Biarkan kosong untuk mempertahankan nilai saat ini.</small>
+            </div>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="fmsStorageS3PathStyle">
+            <label class="form-check-label" for="fmsStorageS3PathStyle">Path-style endpoint</label>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="fmsStorageS3UseTls">
+            <label class="form-check-label" for="fmsStorageS3UseTls">Gunakan TLS (https)</label>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-sm" type="button" id="fmsStorageConfigSave"><i class="ph-duotone ph-floppy-disk me-1"></i>Simpan Konfigurasi</button>
+        <div class="small text-muted mt-2" id="fmsStorageConfigNote"></div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php if (!empty($canManageUsers)): ?>
+  <div class="col-lg-8">
     <div class="card custom-card mt-3" id="fmsStorageMimeRoot" data-settings-url="<?= esc(site_url('api/v1/storage/settings'), 'attr') ?>">
       <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="mb-0">Tipe MIME Diizinkan</h5>
