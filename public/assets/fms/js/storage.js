@@ -160,6 +160,27 @@
   if (usersRoot) initUsers(usersRoot);
   initMimeSettings();
 
+  /* Sidebar off-canvas (mobile): toggle + backdrop + auto-close saat resize ke desktop. */
+  (function initSidebarToggle() {
+    const shell = document.querySelector('.fms-storage-shell');
+    const toggle = document.getElementById('fmsStorageSidebarToggle');
+    const backdrop = document.getElementById('fmsStorageSidebarBackdrop');
+    if (!shell || !toggle) return;
+
+    function close() { shell.classList.remove('fms-sidebar-open'); }
+
+    toggle.addEventListener('click', function () {
+      shell.classList.toggle('fms-sidebar-open');
+    });
+    if (backdrop) backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') close();
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 991.98) close();
+    });
+  })();
+
   function initAudit(root) {
     const api = root.dataset.apiUrl;
     const table = document.getElementById('fmsStorageAudit');
@@ -712,8 +733,8 @@
       rolesBody.innerHTML = '';
       state.roles.forEach(function (r) {
         const perms = (r.permissions || []).map(function (p) {
-          return '<span class="badge bg-body-secondary text-body me-1">' + esc(p) + '</span>';
-        }).join('');
+          return '<span class="badge bg-body-secondary text-body me-1 mb-1">' + esc(p) + '</span>';
+        }).join(' ');
         const tr = document.createElement('tr');
         tr.innerHTML = '<td><i class="ph-duotone ph-shield-check me-2"></i>' + esc(r.name) + '</td>'
           + '<td>' + perms + '</td>'
@@ -730,15 +751,33 @@
 
     function renderRoleCheckboxes(container, selected) {
       container.innerHTML = '';
-      state.roles.forEach(function (r) {
-        if (r.name === 'super_admin') return;
+      const roles = Array.isArray(state.roles) ? state.roles : [];
+      if (!roles.length) {
+        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role di kartu <strong>Storage Roles</strong> terlebih dahulu.</div>';
+        return;
+      }
+      let assignable = 0;
+      roles.forEach(function (r) {
+        const isSuper = r.name === 'super_admin';
         const div = document.createElement('div');
         div.className = 'form-check';
+        /* super_admin selalu ditampilkan tapi disabled & terkunci tercentang —
+           supaya role tampil (tidak "kosong"), tapi tak bisa dicabut sembarangan. */
+        const checked = isSuper || selected.indexOf(r.id) !== -1;
+        if (!isSuper) assignable++;
         div.innerHTML = '<input class="form-check-input" type="checkbox" value="' + r.id + '" id="role-' + r.id + '"'
-          + (selected.indexOf(r.id) !== -1 ? ' checked' : '') + '>'
-          + '<label class="form-check-label" for="role-' + r.id + '">' + esc(r.name) + '</label>';
+          + (checked ? ' checked' : '')
+          + (isSuper ? ' disabled' : '') + '>'
+          + '<label class="form-check-label" for="role-' + r.id + '">' + esc(r.name)
+          + (isSuper ? ' <span class="badge bg-danger-subtle text-danger ms-1">penuh</span>' : '') + '</label>';
         container.appendChild(div);
       });
+      if (assignable === 0) {
+        const hint = document.createElement('div');
+        hint.className = 'text-muted small mt-1';
+        hint.textContent = 'Hanya role super_admin yang tersedia. Buat role baru untuk memberi akses terbatas.';
+        container.appendChild(hint);
+      }
     }
 
     function renderPermissionCheckboxes(container, selected) {

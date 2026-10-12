@@ -630,11 +630,84 @@ html[data-theme-mode="dark"] .fms-storage-shell .bg-body-secondary {
   }
 }
 
+/* ===== RESPONSIF MOBILE: sidebar off-canvas + main full width ===== */
+.fms-storage-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 1040;
+}
+
+.fms-storage-sidebar-toggle { flex: 0 0 auto; }
+
+@media (max-width: 991.98px) {
+  /* Sidebar jadi off-canvas: slide dari kiri, lebar tetap, tak mendorong konten */
+  .fms-storage-shell .fms-storage-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px !important;
+    max-width: 82vw;
+    z-index: 1045;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform .25s var(--fms-storage-ease);
+    box-shadow: 0 0 24px rgba(0, 0, 0, .18);
+  }
+
+  .fms-storage-shell.fms-sidebar-open .fms-storage-sidebar {
+    transform: translateX(0);
+  }
+
+  .fms-storage-shell.fms-sidebar-open .fms-storage-sidebar-backdrop {
+    display: block;
+  }
+
+  .fms-storage-shell .fms-storage-main {
+    padding: 1rem !important;
+    width: 100%;
+  }
+
+  .fms-storage-shell .fms-storage-body {
+    display: block !important;
+  }
+
+  /* Tabel: scroll horizontal halus, kolom tidak mengecil berantakan */
+  .fms-storage-shell .fms-storage-table {
+    min-width: 640px;
+  }
+
+  .fms-storage-shell .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .fms-storage-shell .fms-storage-main {
+    padding: .6rem !important;
+  }
+
+  .fms-storage-shell .fms-storage-header .container-fluid {
+    padding-left: .75rem !important;
+    padding-right: .75rem !important;
+  }
+
+  .fms-storage-shell .fms-storage-title {
+    font-size: 1rem;
+  }
+
+  .fms-storage-shell .fms-storage-table {
+    min-width: 560px;
+  }
+}
+
 /* MIME CHECKLIST */
 .fms-storage-shell .fms-storage-mime-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: .5rem;
+  gap: 1rem;
 }
 .fms-storage-shell .fms-storage-mime-item {
   display: flex;

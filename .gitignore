@@ -134,3 +134,5 @@ _modules/*
 # env backups (berisi secrets)
 .env.bak*
 *.env.bak*
+
+/docs/

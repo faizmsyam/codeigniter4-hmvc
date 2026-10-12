@@ -19,35 +19,33 @@
   </div>
   <div class="col-12">
     <div class="card custom-card fms-storage-card">
-      <div class="card-header fms-storage-toolbar">
-        <div class="fms-storage-toolbar-head">
-          <div class="fms-storage-toolbar-title">
-            <h5 class="mb-0 fms-storage-title">Object Browser</h5>
-            <nav id="fmsStorageBreadcrumb" aria-label="Breadcrumb folder" class="mt-1">
-              <ol class="breadcrumb mb-0"></ol>
-            </nav>
+      <div class="card-header fms-storage-toolbar fms-storage-toolbar-head row">
+        <div class="fms-storage-toolbar-title col-md-12 mb-2">
+          <h5 class="mb-0 fms-storage-title">Object Browser</h5>
+          <nav id="fmsStorageBreadcrumb" aria-label="Breadcrumb folder" class="mt-1">
+            <ol class="breadcrumb mb-0"></ol>
+          </nav>
+        </div>
+        <div class="fms-storage-toolbar-actions col-md-12">
+          <div class="input-group input-group-sm fms-storage-search">
+            <span class="input-group-text"><i class="ph-duotone ph-magnifying-glass"></i></span>
+            <input id="fmsStorageSearch" type="search" class="form-control" placeholder="Cari object..." aria-label="Cari object">
           </div>
-          <div class="fms-storage-toolbar-actions">
-            <div class="input-group input-group-sm fms-storage-search">
-              <span class="input-group-text"><i class="ph-duotone ph-magnifying-glass"></i></span>
-              <input id="fmsStorageSearch" type="search" class="form-control" placeholder="Cari object..." aria-label="Cari object">
-            </div>
-            <select id="fmsStorageSort" class="form-select form-select-sm fms-storage-sort" aria-label="Urutkan">
-              <option value="name">Nama</option>
-              <option value="size">Ukuran</option>
-              <option value="updated_at">Diperbarui</option>
-              <option value="mime">Tipe</option>
-            </select>
-            <label class="btn btn-primary btn-sm fms-storage-upload mb-0">
-              <i class="ph-duotone ph-upload-simple me-1"></i>Upload
-              <input id="fmsStorageFile" type="file" multiple hidden>
-            </label>
-            <button id="fmsStorageNewFolder" type="button" class="btn btn-outline-primary btn-sm" title="Buat folder" aria-label="Buat folder">
-              <i class="ph-duotone ph-folder-simple-plus me-1"></i>Folder
-            </button>
+          <select id="fmsStorageSort" class="form-select form-select-sm fms-storage-sort" aria-label="Urutkan">
+            <option value="name">Nama</option>
+            <option value="size">Ukuran</option>
+            <option value="updated_at">Diperbarui</option>
+            <option value="mime">Tipe</option>
+          </select>
+          <label class="btn btn-primary btn-sm fms-storage-upload mb-0">
+            <i class="ph-duotone ph-upload-simple me-1"></i>Upload
+            <input id="fmsStorageFile" type="file" multiple hidden>
+          </label>
+          <button id="fmsStorageNewFolder" type="button" class="btn btn-outline-primary btn-sm" title="Buat folder" aria-label="Buat folder">
+            <i class="ph-duotone ph-folder-simple-plus me-1"></i>Folder
+          </button>
 
-            <button id="fmsStorageRefresh" type="button" class="btn btn-outline-secondary btn-sm fms-storage-icon-btn" title="Muat ulang" aria-label="Muat ulang"><i class="ph-duotone ph-arrows-clockwise"></i></button>
-          </div>
+          <button id="fmsStorageRefresh" type="button" class="btn btn-outline-secondary btn-sm fms-storage-icon-btn" title="Muat ulang" aria-label="Muat ulang"><i class="ph-duotone ph-arrows-clockwise"></i></button>
         </div>
       </div>
       <div class="card-body">
