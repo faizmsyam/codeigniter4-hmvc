@@ -46,6 +46,8 @@ final class FMSKeysGuard
             'Response signing public key (fms-response-public.key)' => $apiConfig->responseSigningPublicKeyPath,
             'JWT private key (fms-jwt-active.key)' => $jwtConfig->privateKeyPath,
             'JWT public key (fms-jwt-active.pub)' => array_values($jwtConfig->publicKeyPaths)[0] ?? '',
+            'Encryption private key (encryption.key)' => WRITEPATH . 'keys/encryption.key',
+            'Encryption public key (encryption.pub.pem)' => WRITEPATH . 'keys/encryption.pub.pem',
         ];
 
         $missing = [];

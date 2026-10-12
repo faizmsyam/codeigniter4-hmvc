@@ -330,13 +330,14 @@ FMS_HASHIDS_MIN_LENGTH = 12
 ```
 > **Catatan**: Pastikan database MySQL sudah dibuat (misal: `CREATE DATABASE db_starter_ci4;`). `FMS_HASHIDS_SALT` wajib minimal 32 karakter untuk enkripsi obfuscation ID menu & user group. Jangan pernah melakukan commit file `.env` atau kredensial rahasia ke repository.
 
-### 4. Generate Kriptografi Key (Ed25519 Response, JWT & Encryption)
-Aplikasi menandatangani seluruh response API secara otomatis (Ed25519) dan membutuhkan pasangan key privat/publik. Generate key lokal untuk development:
+### 4. Generate Kriptografi Key (Ed25519 Response, JWT & RSA Encryption)
+Aplikasi membutuhkan material kriptografi lokal di `writable/keys/`. Generate seluruh key secara berurutan:
 ```bash
 php spark fms:keys:generate --scope=response
 php spark fms:keys:generate --scope=jwt
 php spark fms:encryption:generate
 ```
+> **Catatan**: Service enkripsi bawaan (`service('encrypter')`) secara otomatis membaca `writable/keys/encryption.key`. Jadi Anda **tidak perlu lagi** menyetel `encryption.key` manual di file `.env`. Cukup jalankan perintah generate di atas!
 Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah di-ignore di `.gitignore`).
 
 > **Penting**: Aplikasi akan **terblokir total** (HTTP 500 di semua endpoint dan halaman) jika salah satu dari 4 key tersebut tidak ada atau kosong. Pesan errornya langsung menunjukkan key yang hilang dan perintah generate-nya:

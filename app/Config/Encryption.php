@@ -23,6 +23,22 @@ class Encryption extends BaseConfig
      */
     public string $key = '';
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        if ($this->key === '') {
+            $keyPath = WRITEPATH . 'keys/encryption.key';
+            if (is_file($keyPath)) {
+                $raw = (string) @file_get_contents($keyPath);
+                if ($raw !== '') {
+                    // Jika berisi string PEM RSA, kita hash SHA-256 agar jadi binary 32-byte yang valid untuk OpenSSLHandler
+                    $this->key = hash('sha256', $raw, true);
+                }
+            }
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Encryption Driver to Use
