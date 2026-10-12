@@ -328,11 +328,12 @@ database.default.port = 3306
 ```
 > **Catatan**: Pastikan database MySQL sudah dibuat (misal: `CREATE DATABASE db_starter_ci4;`). Jangan pernah melakukan commit file `.env` atau kredensial rahasia ke repository.
 
-### 4. Generate Kriptografi Key (Ed25519 Response & JWT)
+### 4. Generate Kriptografi Key (Ed25519 Response, JWT & Encryption)
 Aplikasi menandatangani seluruh response API secara otomatis (Ed25519) dan membutuhkan pasangan key privat/publik. Generate key lokal untuk development:
 ```bash
 php spark fms:keys:generate --scope=response
 php spark fms:keys:generate --scope=jwt
+php spark fms:encryption:generate
 ```
 Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah di-ignore di `.gitignore`).
 
