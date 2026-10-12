@@ -1,0 +1,26 @@
+meta {
+  name: List System Activity Logs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/activity-logs
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  per_page: 20
+  search: 
+  module: 
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

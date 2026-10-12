@@ -1,0 +1,34 @@
+meta {
+  name: Create User
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "username": "userbaru",
+  "email": "userbaru@example.com",
+  "password": "Password123!",
+  "full_name": "User Baru Uji Coba",
+  "phone_number": "081234567890",
+  "is_active": 1,
+  "groups": [
+    "group-hash-id-disini"
+  ]
+}
+}

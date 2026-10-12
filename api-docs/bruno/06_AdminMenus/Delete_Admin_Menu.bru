@@ -1,0 +1,19 @@
+meta {
+  name: Delete Admin Menu
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/menus/:menuHash
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

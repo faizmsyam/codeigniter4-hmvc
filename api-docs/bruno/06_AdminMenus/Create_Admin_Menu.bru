@@ -1,0 +1,31 @@
+meta {
+  name: Create Admin Menu
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/menus
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "parent_id": null,
+  "title": "Modul Keuangan",
+  "url": "finance",
+  "icon": "ph-duotone ph-wallet",
+  "order_index": 10,
+  "is_active": 1
+}
+}

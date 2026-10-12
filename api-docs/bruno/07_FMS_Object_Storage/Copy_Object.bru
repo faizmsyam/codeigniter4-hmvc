@@ -1,0 +1,27 @@
+meta {
+  name: Copy Object
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/storage/objects/copy
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "source_key": "Dokumen-2026/laporan-final.pdf",
+  "target_key": "Backup/laporan-final.pdf"
+}
+}

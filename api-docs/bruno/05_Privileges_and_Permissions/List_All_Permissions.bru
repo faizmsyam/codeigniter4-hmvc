@@ -1,0 +1,19 @@
+meta {
+  name: List All Permissions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/permissions
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

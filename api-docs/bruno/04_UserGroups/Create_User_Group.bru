@@ -1,0 +1,28 @@
+meta {
+  name: Create User Group
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/user-groups
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "name": "Staff Keuangan",
+  "description": "Grup pengguna divisi finansial",
+  "is_active": 1
+}
+}

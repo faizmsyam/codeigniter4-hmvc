@@ -1,0 +1,19 @@
+meta {
+  name: Export Activity Logs (CSV/Excel)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/activity-logs/export
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

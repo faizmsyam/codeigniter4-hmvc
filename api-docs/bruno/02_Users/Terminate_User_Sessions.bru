@@ -1,0 +1,19 @@
+meta {
+  name: Terminate User Sessions
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/users/:userHash/sessions
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

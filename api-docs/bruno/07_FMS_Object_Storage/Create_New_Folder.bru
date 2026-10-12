@@ -1,0 +1,27 @@
+meta {
+  name: Create New Folder
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/storage/objects/folder
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "folder_name": "Dokumen-2026",
+  "parent_prefix": ""
+}
+}

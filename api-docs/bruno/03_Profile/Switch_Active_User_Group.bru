@@ -1,0 +1,26 @@
+meta {
+  name: Switch Active User Group
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/profile/switch-group
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "group_hash": "group-hash-id-tujuan"
+}
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Bulk Delete Objects
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/storage/objects/bulk-delete
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "keys": [
+    "Dokumen-2026/laporan-final.pdf",
+    "test.txt"
+  ]
+}
+}

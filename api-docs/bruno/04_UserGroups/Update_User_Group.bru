@@ -1,0 +1,27 @@
+meta {
+  name: Update User Group
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/user-groups/:groupHash
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "name": "Staff Keuangan & Anggaran",
+  "description": "Diperbarui"
+}
+}

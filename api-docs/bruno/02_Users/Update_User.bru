@@ -1,0 +1,28 @@
+meta {
+  name: Update User
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/:userHash
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "full_name": "Nama User Diperbarui",
+  "email": "userbaru.update@example.com",
+  "phone_number": "081299998888"
+}
+}

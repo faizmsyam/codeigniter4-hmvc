@@ -1,0 +1,19 @@
+meta {
+  name: Get Group Permissions With Hash
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/privileges/groups/:groupHash/permissions
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

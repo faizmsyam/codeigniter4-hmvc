@@ -1,0 +1,19 @@
+meta {
+  name: Get Brand Identity
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/brand
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

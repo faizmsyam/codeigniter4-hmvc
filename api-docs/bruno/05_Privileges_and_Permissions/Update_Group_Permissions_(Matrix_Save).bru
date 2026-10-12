@@ -1,0 +1,29 @@
+meta {
+  name: Update Group Permissions (Matrix Save)
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/api/v1/privileges/groups/:groupHash/permissions
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "permissions": [
+    "perm-hash-1",
+    "perm-hash-2"
+  ]
+}
+}

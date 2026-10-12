@@ -1,0 +1,19 @@
+meta {
+  name: Delete User Group
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/user-groups/:groupHash
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

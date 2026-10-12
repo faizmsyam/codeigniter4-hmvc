@@ -1,0 +1,27 @@
+meta {
+  name: Rename Object / File
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/storage/objects/rename
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "old_key": "Dokumen-2026/laporan.pdf",
+  "new_key": "Dokumen-2026/laporan-final.pdf"
+}
+}

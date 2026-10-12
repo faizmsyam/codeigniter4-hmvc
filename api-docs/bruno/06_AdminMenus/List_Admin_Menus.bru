@@ -1,0 +1,19 @@
+meta {
+  name: List Admin Menus
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/menus
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

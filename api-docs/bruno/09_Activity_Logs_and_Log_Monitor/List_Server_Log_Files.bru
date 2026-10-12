@@ -1,0 +1,19 @@
+meta {
+  name: List Server Log Files
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/log-monitor/files
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

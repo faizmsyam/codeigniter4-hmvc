@@ -1,0 +1,28 @@
+meta {
+  name: Update Storage Settings
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/storage/settings
+  body: json
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+{
+  "storage_driver": "local",
+  "bucket_name": "fms-private",
+  "object_key_prefix": "fms-uploads"
+}
+}

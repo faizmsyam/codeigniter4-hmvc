@@ -1,0 +1,19 @@
+meta {
+  name: List API Keys
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/settings/api-keys
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
