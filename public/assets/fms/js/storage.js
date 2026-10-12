@@ -477,11 +477,13 @@
       });
     }
 
-    uploadInput.addEventListener('change', function (e) {
-      const files = e.target.files || [];
-      for (let i = 0; i < files.length; i++) uploadFile(files[i]);
-      e.target.value = '';
-    });
+    if (uploadInput) {
+      uploadInput.addEventListener('change', function (e) {
+        const files = e.target.files || [];
+        for (let i = 0; i < files.length; i++) uploadFile(files[i]);
+        e.target.value = '';
+      });
+    }
 
     /* Drag & drop: file DAN folder (webkit entries) — pertahankan struktur. */
     function entryFile(entry) {
