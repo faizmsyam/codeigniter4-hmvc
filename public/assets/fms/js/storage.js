@@ -443,8 +443,9 @@
       return chain;
     }
 
-    function uploadFile(file, prefix, skipReload) {
-      if (!file) return Promise.resolve();
+    function uploadFile(file, prefix, options) {
+      if (!file) return Promise.resolve(false);
+      const opts = options || {};
       const targetPrefix = prefix === undefined ? currentPrefix : prefix;
       return ensureFolder(targetPrefix).then(function () {
         const form = new FormData();
@@ -452,24 +453,38 @@
         form.append('prefix', targetPrefix);
         return FMS.post(api + '/objects', form, { blockUI: true })
           .then(function () {
-            FMS.toast('Upload berhasil: ' + file.name, true);
-            if (!skipReload) load(currentPrefix, currentPage);
+            if (!opts.quiet) FMS.toast('Upload berhasil: ' + file.name, true);
+            if (!opts.skipReload) load(currentPrefix, currentPage);
+            return true;
           })
           .catch(function (error) {
-            FMS.toast((error && error.message) || 'Upload gagal.', false);
+            FMS.toast((error && error.message) || ('Upload gagal: ' + file.name), false);
+            return false;   /* laporan gagal ke pemanggil — jangan di-swallow */
           });
       });
     }
 
-    /* Antrian serial + satu kali refresh di akhir */
+    /* Antrian serial + satu kali refresh di akhir.
+       Ringkasan sukses/gagal dihitung dari hasil nyata tiap file. */
     function runQueue(items) {
       if (!items.length) return Promise.resolve();
+      const single = items.length === 1;
+      let successCount = 0;
+      let failureCount = 0;
       let chain = Promise.resolve();
       items.forEach(function (item) {
-        chain = chain.then(function () { return uploadFile(item.file, item.prefix, true); });
+        chain = chain.then(function () {
+          /* File tunggal: per-file toast & reload langsung.
+             Banyak file: senyap per-file, ringkas di akhir. */
+          return uploadFile(item.file, item.prefix, { quiet: !single, skipReload: !single })
+            .then(function (ok) { ok ? successCount++ : failureCount++; });
+        });
       });
       return chain.then(function () {
-        FMS.toast(items.length + ' file selesai diupload.', true);
+        if (!single) {
+          if (successCount > 0) FMS.toast(successCount + ' file berhasil diupload.', true);
+          if (failureCount > 0) FMS.toast(failureCount + ' file gagal diupload.', false);
+        }
         load(currentPrefix, 1);
       });
     }
