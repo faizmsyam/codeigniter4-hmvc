@@ -22,7 +22,7 @@ class FMSKeysGenerate extends BaseCommand
      */
     public function run(array $requestParameters): int
     {
-        $selectedScope = strtolower((string) (CLI::getOption('scope') ?: 'response'));
+        $selectedScope = $this->resolveScopeOption();
         if (!in_array($selectedScope, ['response', 'jwt'], true)) {
             CLI::error('Scope key tidak valid. Gunakan response atau jwt.');
 
@@ -51,6 +51,24 @@ class FMSKeysGenerate extends BaseCommand
         CLI::write('Jangan commit private key production atau menyalin private key ke response/log.', 'yellow');
 
         return EXIT_SUCCESS;
+    }
+
+    /**
+     * Ambil nilai --scope baik dalam format "--scope=jwt" maupun "--scope jwt".
+     * Parser CLI CI4 (system/CLI/CLI.php::parseCommandLine) tidak memecah "--scope=jwt",
+     * sehingga option tersimpan dengan key literal "scope=jwt" dan getOption('scope') null.
+     */
+    private function resolveScopeOption(): string
+    {
+        $options = CLI::getOptions();
+
+        foreach (array_keys($options) as $optionKey) {
+            if (str_starts_with($optionKey, 'scope=')) {
+                return strtolower((string) substr($optionKey, strlen('scope=')));
+            }
+        }
+
+        return strtolower((string) (CLI::getOption('scope') ?: 'response'));
     }
 
     /**
