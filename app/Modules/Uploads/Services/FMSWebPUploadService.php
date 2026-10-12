@@ -49,7 +49,7 @@ final class FMSWebPUploadService
         ?callable $webPEncoder = null,
         ?FMSPrivateUploadService $privateUploadService = null,
     ) {
-        $this->configuration = $configuration ?? config(FMSUploads::class);
+        $this->configuration = $configuration ?? FMSUploads::runtimeConfig();
         $this->namingService = $namingService ?? new FMSUploadNamingService();
         $this->webPEncoder = $webPEncoder;
         $this->privateUploadService = $privateUploadService ?? new FMSPrivateUploadService(

@@ -56,7 +56,7 @@ final class FMSFileUploadService
         ?FMSPrivateUploadService $privateUploadService = null,
         ?FMSWebPUploadService $imageUploadService = null,
     ) {
-        $this->configuration  = $configuration ?? config(FMSUploads::class);
+        $this->configuration  = $configuration ?? FMSUploads::runtimeConfig();
         $this->namingService  = $namingService ?? new FMSUploadNamingService();
         $storage              = FMSObjectStorageFactory::create($this->configuration);
         $this->privateUploadService = $privateUploadService ?? new FMSPrivateUploadService(

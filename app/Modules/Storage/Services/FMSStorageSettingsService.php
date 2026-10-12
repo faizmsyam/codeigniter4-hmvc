@@ -100,6 +100,52 @@ final class FMSStorageSettingsService
     public function set(string $key, string $value): void
     {
         if (! $this->tableReady()) return;
+
+        /* Normalisasi S3 endpoint host: terima URL penuh (https://host/path),
+           simpan sebagai host polos. Skema menentukan s3_use_tls otomatis. */
+        if ($key === 's3_endpoint_host') {
+            [$host, $tls] = $this->normalizeEndpointHost($value);
+            $value = $host;
+            if ($tls !== null) {
+                $this->writeRaw('s3_use_tls', $tls ? 'true' : 'false');
+            }
+        }
+
+        $this->writeRaw($key, $value);
+    }
+
+    /**
+     * Ubah input endpoint jadi host polos + deteksi skema TLS.
+     * "https://assets-x.go.id/" -> ["assets-x.go.id", true]
+     * "s3.amazonaws.com"        -> ["s3.amazonaws.com", null]
+     *
+     * @return array{0:string, 1:?bool}
+     */
+    private function normalizeEndpointHost(string $value): array
+    {
+        $value = trim($value);
+        $tls = null;
+
+        if (str_contains($value, '://')) {
+            $host = parse_url($value, PHP_URL_HOST);
+            if (is_string($host) && $host !== '') {
+                $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+                if ($scheme === 'https') $tls = true;
+                elseif ($scheme === 'http') $tls = false;
+                $port = parse_url($value, PHP_URL_PORT);
+                $value = $host . ($port ? ':' . $port : '');
+            } else {
+                $value = preg_replace('#^[a-z][a-z0-9+.\-]*://#i', '', $value) ?? $value;
+            }
+        }
+
+        /* Buang path/query/fragment/spasi; sisakan host[:port]. */
+        $value = preg_replace('#[/\s].*$#', '', $value) ?? $value;
+        return [rtrim($value, '/'), $tls];
+    }
+
+    private function writeRaw(string $key, string $value): void
+    {
         $now = date('Y-m-d H:i:s');
         $existing = db_connect()->table('storage_settings')
             ->where('setting_key', $key)->get(1)->getRowArray();

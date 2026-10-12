@@ -20,7 +20,7 @@ final class FMSUploadValidation
      */
     public static function validatePurpose(array $requestData, ?FMSUploads $configuration = null): array
     {
-        $resolvedConfiguration = $configuration ?? config(FMSUploads::class);
+        $resolvedConfiguration = $configuration ?? FMSUploads::runtimeConfig();
         $purposeName           = trim((string) ($requestData['purpose'] ?? ''));
 
         if ($purposeName === '' || mb_strlen($purposeName) > 64) {
@@ -56,7 +56,7 @@ final class FMSUploadValidation
      */
     public static function validateFileCount(int $receivedFileCount, ?FMSUploads $configuration = null): array
     {
-        $resolvedConfiguration = $configuration ?? config(FMSUploads::class);
+        $resolvedConfiguration = $configuration ?? FMSUploads::runtimeConfig();
 
         if ($receivedFileCount < 1) {
             return ['file' => ['Berkas wajib diunggah.']];
@@ -77,7 +77,7 @@ final class FMSUploadValidation
      */
     public static function validateUploadMetadata(array $requestData, ?FMSUploads $configuration = null): array
     {
-        $resolvedConfiguration = $configuration ?? config(FMSUploads::class);
+        $resolvedConfiguration = $configuration ?? FMSUploads::runtimeConfig();
         $validationErrors      = [];
 
         $folderName   = trim((string) ($requestData['folder'] ?? ''));
@@ -116,7 +116,7 @@ final class FMSUploadValidation
      */
     public static function allowedMimeList(?FMSUploads $configuration = null): array
     {
-        $resolvedConfiguration = $configuration ?? config(FMSUploads::class);
+        $resolvedConfiguration = $configuration ?? FMSUploads::runtimeConfig();
         return $resolvedConfiguration->allowedMimes();
     }
 }

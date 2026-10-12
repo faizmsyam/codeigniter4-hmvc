@@ -315,6 +315,26 @@ final class FMSUploads extends BaseConfig
         }
     }
 
+    /**
+     * Kembalikan config runtime: clone singleton lalu inject nilai dari
+     * tabel storage_settings (Storage Settings UI).
+     *
+     * Gunakan ini di SEMUA titik yang butuh driver/path/bucket/S3/HMAC —
+     * supaya konfigurasi tidak lagi bergantung pada .env.
+     *
+     * Aman dipanggil sebelum DB siap: bila tabel belum ada, fallback ke default.
+     */
+    public static function runtimeConfig(): self
+    {
+        $config = clone config(self::class);
+        try {
+            (new \App\Modules\Storage\Services\FMSStorageSettingsService())->applyTo($config);
+        } catch (\Throwable $e) {
+            /* DB / tabel belum siap — pakai default config. */
+        }
+        return $config;
+    }
+
     private function discoverBinaryPath(string $name): string
     {
         $candidates = [
