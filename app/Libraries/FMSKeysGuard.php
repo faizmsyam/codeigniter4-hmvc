@@ -6,7 +6,6 @@ namespace App\Libraries;
 
 use App\Config\FMSApi;
 use App\Config\FMSJwt;
-use CodeIgniter\Exceptions\ConfigException;
 
 /**
  * Memastikan seluruh key kriptografi Ed25519 tersedia sebelum aplikasi berjalan.
@@ -19,11 +18,11 @@ final class FMSKeysGuard
     {
         $missing = $this->collectMissingKeys();
 
-        if ($missing === []) {
+        if (empty($missing)) {
             return;
         }
 
-        throw new ConfigException(sprintf(
+        throw new \RuntimeException(sprintf(
             "Key kriptografi FMS tidak ditemukan:\n  - %s\n"
             . "Jalankan perintah berikut di root project:\n"
             . "  php spark fms:keys:generate --scope=response\n"
