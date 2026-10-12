@@ -465,7 +465,10 @@
         e.stopPropagation();
         dropzone.classList.remove('is-dragover');
         const files = e.dataTransfer ? e.dataTransfer.files : null;
-        if (!files || !files.length) return;
+        if (!files || !files.length) {
+          FMS.toast('Drop file saja (folder tidak didukung). Tarik file, bukan folder.', false);
+          return;
+        }
         const collected = [];
         for (let i = 0; i < files.length; i++) collected.push({ file: files[i], prefix: currentPrefix });
         runQueue(collected);
