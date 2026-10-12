@@ -557,41 +557,32 @@ Generator tidak boleh dipakai untuk menimpa modul yang sudah ada tanpa backup. S
 > Catatan ekspektasi: template bawaan generator masih menulis `Config/Routes.php`, controller tunggal `FMSController`, model `FMSModel` dengan tabel placeholder, dan view placeholder. Semua itu hanya titik awal. Modul dianggap API-first hanya bila sudah mengikuti langkah 4–11 di atas.
 
 
-## Dokumentasi API & API Client (Bruno & Postman)
+## Dokumentasi API & API Client (Bruno)
 
-Repository ini menyertakan koleksi API lengkap untuk seluruh endpoint `api/v1` di folder `api-docs/` dengan dukungan penuh untuk **Bruno** dan **Postman**.
+Repository ini menyertakan koleksi API lengkap untuk seluruh endpoint `api/v1` di folder `api-docs/bruno/` menggunakan **Bruno** (API client open-source & offline-first yang Git-friendly).
 
 ```text
-api-docs/
-├── FMS_Starter_API.postman_collection.json   # Full Collection Postman v2.1 (70+ endpoint, auto-token script)
-├── FMS_Local.postman_environment.json        # Environment Postman (baseUrl, user demo & superadmin)
-└── bruno/                                    # Native Bruno Collection (Git-friendly text format)
-    ├── bruno.json
-    ├── environments/
-    │   └── Local.bru
-    ├── 01_Authentication/
-    ├── 02_Users/
-    ├── 03_Profile/
-    ├── 04_UserGroups/
-    ├── 05_Privileges_and_Permissions/
-    ├── 06_AdminMenus/
-    ├── 07_FMS_Object_Storage/
-    ├── 08_System_Settings/
-    ├── 09_Activity_Logs_and_Log_Monitor/
-    └── 10_Brand_Identity/
+api-docs/bruno/                               # Native Bruno Collection
+├── bruno.json
+├── environments/
+│   └── Local.bru                             # Environment lokal (baseUrl, kredensial demo & superadmin)
+├── 01_Authentication/                        # Auth lifecycle, login, session, refresh, logout
+├── 02_Users/                                 # CRUD User, filtering, password reset, unlock, session mgmt
+├── 03_Profile/                               # Profil saya, ganti password, ganti grup, activity log
+├── 04_UserGroups/                            # CRUD User Group, anggota, status
+├── 05_Privileges_and_Permissions/            # Matrix overview, permission catalog, mapping izin
+├── 06_AdminMenus/                            # Navigasi sidebar, hirarki menu, CRUD, reorder menu
+├── 07_FMS_Object_Storage/                    # Storage authentication, CRUD objek, presign URL, sharing
+├── 08_System_Settings/                       # Overview sistem, auth policy, SMTP email, API keys
+├── 09_Activity_Logs_and_Log_Monitor/         # Audit log export, pembaca berkas log server & statistik
+└── 10_Brand_Identity/                        # Brand identity, logo, favicon, warna tema backend
 ```
 
-### Cara Pakai di Bruno (Sangat Direkomendasikan)
+### Cara Pakai di Bruno
 1. Buka aplikasi **Bruno**.
-2. Klik **Open Collection** lalu pilih folder `api-docs/bruno`.
+2. Klik **Open Collection** lalu arahkan ke folder `api-docs/bruno`.
 3. Pilih Environment **Local** di pojok kanan atas.
-4. Buka folder `01_Authentication` -> jalankan request **Login (Admin)**. Token akses (`accessToken`) akan otomatis tersimpan ke environment runtime Bruno dan langsung siap dipakai untuk seluruh request authenticated lainnya!
-
-### Cara Pakai di Postman
-1. Buka **Postman** -> klik **Import**.
-2. Pilih file `api-docs/FMS_Starter_API.postman_collection.json` dan `api-docs/FMS_Local.postman_environment.json`.
-3. Aktifkan environment **FMS Starter - Local Environment**.
-4. Jalankan request **Login (Admin)** di folder `01_Authentication`. Script test otomatis mengekstrak `access_token` ke variabel `{{accessToken}}`.
+4. Buka folder `01_Authentication` -> jalankan request **Login (Admin)**. Token akses (`accessToken`) otomatis tersimpan ke environment runtime Bruno dan langsung aktif untuk seluruh request authenticated lainnya!
 
 ## Pengujian
 
