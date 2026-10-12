@@ -753,29 +753,38 @@
       container.innerHTML = '';
       const roles = Array.isArray(state.roles) ? state.roles : [];
       if (!roles.length) {
-        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role di kartu <strong>Storage Roles</strong> terlebih dahulu.</div>';
+        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role baru di kartu <strong>Storage Roles</strong>.</div>';
         return;
       }
-      let assignable = 0;
-      roles.forEach(function (r) {
-        const isSuper = r.name === 'super_admin';
+
+      /* super_admin hanya tampil saat edit user yang sudah super_admin (disabled, terkunci).
+         Saat Tambah User baru — super_admin tidak pernah ditampilkan. */
+      const isSuper = editingUserId !== null && selected.indexOf(1) !== -1;
+      const shown = roles.filter(function (r) { return r.name !== 'super_admin' || isSuper; });
+      const assignable = shown.filter(function (r) { return r.name !== 'super_admin'; });
+
+      if (!shown.length) {
+        container.innerHTML = '<div class="text-muted small">Belum ada role. Buat role baru di kartu <strong>Storage Roles</strong>.</div>';
+        return;
+      }
+
+      shown.forEach(function (r) {
+        const isSuperRole = r.name === 'super_admin';
         const div = document.createElement('div');
         div.className = 'form-check';
-        /* super_admin selalu ditampilkan tapi disabled & terkunci tercentang —
-           supaya role tampil (tidak "kosong"), tapi tak bisa dicabut sembarangan. */
-        const checked = isSuper || selected.indexOf(r.id) !== -1;
-        if (!isSuper) assignable++;
+        /* super_admin role: disabled + checked, tidak bisa diubah */
         div.innerHTML = '<input class="form-check-input" type="checkbox" value="' + r.id + '" id="role-' + r.id + '"'
-          + (checked ? ' checked' : '')
-          + (isSuper ? ' disabled' : '') + '>'
-          + '<label class="form-check-label" for="role-' + r.id + '">' + esc(r.name)
-          + (isSuper ? ' <span class="badge bg-danger-subtle text-danger ms-1">penuh</span>' : '') + '</label>';
+          + (isSuperRole || selected.indexOf(r.id) !== -1 ? ' checked' : '')
+          + (isSuperRole ? ' disabled' : '') + '>'
+          + '<label class="form-check-label' + (isSuperRole ? ' text-muted' : '') + '" for="role-' + r.id + '">' + esc(r.name)
+          + (isSuperRole ? ' <span class="badge bg-danger-subtle text-danger ms-1">terkunci</span>' : '') + '</label>';
         container.appendChild(div);
       });
-      if (assignable === 0) {
+
+      if (!assignable.length && !isSuper) {
         const hint = document.createElement('div');
         hint.className = 'text-muted small mt-1';
-        hint.textContent = 'Hanya role super_admin yang tersedia. Buat role baru untuk memberi akses terbatas.';
+        hint.textContent = 'Belum ada role. Buat role baru di kartu Storage Roles untuk memberi akses.';
         container.appendChild(hint);
       }
     }
