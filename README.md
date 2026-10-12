@@ -328,20 +328,28 @@ database.default.port = 3306
 ```
 > **Catatan**: Pastikan database MySQL sudah dibuat (misal: `CREATE DATABASE db_starter_ci4;`). Jangan pernah melakukan commit file `.env` atau kredensial rahasia ke repository.
 
-### 4. Berikan Hak Akses Tulis (Permissions) Direktori `writable/`
+### 4. Generate Kriptografi Key (Ed25519 Response & JWT)
+Aplikasi menandatangani seluruh response API secara otomatis (Ed25519) dan membutuhkan pasangan key privat/publik. Generate key lokal untuk development:
+```bash
+php spark fms:keys:generate --scope=response
+php spark fms:keys:generate --scope=jwt
+```
+Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah di-ignore di `.gitignore`). Tanpa langkah ini, endpoint API akan mengembalikan error `Response signing private key is unavailable.`
+
+### 5. Berikan Hak Akses Tulis (Permissions) Direktori `writable/`
 Pastikan direktori cache, session, dan log dapat ditulis oleh web server / CLI:
 ```bash
 chmod -R 777 writable/
 ```
 
-### 5. Jalankan Migrasi Database
+### 6. Jalankan Migrasi Database
 Jalankan migrasi CodeIgniter 4 untuk membuat seluruh tabel sistem dan seed otomatis bawaan:
 ```bash
 php spark migrate
 ```
 *(Catatan: Migrasi FMS sudah otomatis menyertakan seeder default privilese, menu, akun awal, dan pengaturan modul storage).*
 
-### 6. Jalankan Server Pengembangan
+### 7. Jalankan Server Pengembangan
 Jalankan local development server bawaan CodeIgniter:
 ```bash
 php spark serve
