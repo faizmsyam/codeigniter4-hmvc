@@ -379,10 +379,10 @@ final class FMSPrivilegesApiController extends FMSApiController
 
         $isSuperAdministrator = $this->subjectIsSuperAdministrator($authenticatedSubject);
         $repository = new FMSDatabasePrivilegesManagementRepository();
-        $menuRows = array_values(array_filter(
+        $menuRows = $this->hierarchicalMenuRows(array_values(array_filter(
             (new FMSAdminMenuModel())->findAllOrdered(),
             static fn (array $row): bool => trim((string) ($row['url'] ?? '')) !== 'settings',
-        ));
+        )));
         $menuIdentifiers = array_map(static fn (array $row): int => (int) $row['id'], $menuRows);
         $menuPermissionRows = $repository->menuPermissionMappingsForMenus($menuIdentifiers);
         $overviewGroups = $repository->paginateGroups(1, 100, [
@@ -792,6 +792,55 @@ final class FMSPrivilegesApiController extends FMSApiController
         }
 
         return (int) $identifierValue;
+    }
+
+    /**
+     * Susun ulang baris menu flat menjadi urutan hierarkis: setiap parent
+     * langsung diikuti anak-anaknya. Tanpa ini, flat list berurut by
+     * id_parent membuat anak menu muncul jauh dari induknya di matrix
+     * Privileges sehingga terlihat salah kelompok.
+     *
+     * @param array<int, array<string, mixed>> $menuRows
+     * @return array<int, array<string, mixed>>
+     */
+    private function hierarchicalMenuRows(array $menuRows): array
+    {
+        $childrenByParent = [];
+        foreach ($menuRows as $menuRow) {
+            $parentIdentifier = (int) ($menuRow['id_parent'] ?? 0);
+            $childrenByParent[$parentIdentifier][] = $menuRow;
+        }
+
+        $ordered = [];
+        $visited = [];
+
+        $appendBranch = function (int $parentIdentifier) use (&$appendBranch, &$ordered, &$visited, $childrenByParent): void {
+            foreach ($childrenByParent[$parentIdentifier] ?? [] as $childRow) {
+                $childIdentifier = (int) $childRow['id'];
+
+                if (isset($visited[$childIdentifier])) {
+                    continue;
+                }
+
+                $visited[$childIdentifier] = true;
+                $ordered[]                = $childRow;
+                $appendBranch($childIdentifier);
+            }
+        };
+
+        $appendBranch(0);
+
+        /* Menu yatim (parent tidak ada di set) tetap ditampilkan. */
+        foreach ($menuRows as $menuRow) {
+            $menuIdentifier = (int) $menuRow['id'];
+
+            if (! isset($visited[$menuIdentifier])) {
+                $visited[$menuIdentifier] = true;
+                $ordered[]                = $menuRow;
+            }
+        }
+
+        return $ordered;
     }
 
     /**
