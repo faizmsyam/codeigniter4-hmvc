@@ -293,61 +293,63 @@ Short echo tag berikut dilarang:
 <?= esc($userName) ?>
 ```
 
-## Instalasi pengembangan
+## Panduan Memulai Cepat (Quick Start Setelah Clone)
 
-Pasang dependency:
+Ikuti langkah-langkah berikut secara berurutan saat pertama kali melakukan clone repository:
 
+### 1. Clone Repository & Masuk ke Direktori
+```bash
+git clone https://github.com/faizmsyam/codeigniter4-hmvc.git
+cd codeigniter4-hmvc
+```
+
+### 2. Pasang Dependensi Composer
 ```bash
 composer install
 ```
 
-Salin environment template:
-
+### 3. Salin & Konfigurasi Berkas Environment (`.env`)
+Salin file template environment bawaan:
 ```bash
 cp env .env
 ```
-
-Atur sekurang-kurangnya konfigurasi berikut pada `.env` lokal:
-
+Buka file `.env` dan sesuaikan pengaturan dasar berikut:
 ```ini
 CI_ENVIRONMENT = development
 app.baseURL = 'http://localhost:8080/'
 
 database.default.hostname = localhost
-database.default.database = fms_application
+database.default.database = db_starter_ci4
 database.default.username = root
 database.default.password =
 database.default.DBDriver = MySQLi
 database.default.DBPrefix = fms_
 database.default.port = 3306
 ```
+> **Catatan**: Pastikan database MySQL sudah dibuat (misal: `CREATE DATABASE db_starter_ci4;`). Jangan pernah melakukan commit file `.env` atau kredensial rahasia ke repository.
 
-Jangan commit `.env`, private signing key, API key, Basic Auth password, JWT private key, atau secret lain.
-
-Jalankan migration dan seeder setelah implementasi schema tersedia:
-
+### 4. Berikan Hak Akses Tulis (Permissions) Direktori `writable/`
+Pastikan direktori cache, session, dan log dapat ditulis oleh web server / CLI:
 ```bash
-php spark migrate
-php spark db:seed FMSDatabaseSeeder
+chmod -R 777 writable/
 ```
 
-Jalankan aplikasi:
+### 5. Jalankan Migrasi Database
+Jalankan migrasi CodeIgniter 4 untuk membuat seluruh tabel sistem dan seed otomatis bawaan:
+```bash
+php spark migrate
+```
+*(Catatan: Migrasi FMS sudah otomatis menyertakan seeder default privilese, menu, akun awal, dan pengaturan modul storage).*
 
+### 6. Jalankan Server Pengembangan
+Jalankan local development server bawaan CodeIgniter:
 ```bash
 php spark serve
 ```
-
-Alamat default:
-
-```text
-http://localhost:8080
-```
-
-Admin menggunakan prefix:
-
-```text
-/fms-admin
-```
+Aplikasi dapat diakses melalui browser:
+- **Halaman Utama**: `http://localhost:8080`
+- **Dashboard Backend Admin**: `http://localhost:8080/fms-admin`
+- **Modul FMS Object Storage**: `http://localhost:8080/fms-storage`
 
 ## Perintah modul
 
