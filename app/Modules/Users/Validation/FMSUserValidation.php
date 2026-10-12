@@ -206,11 +206,11 @@ final class FMSUserValidation
             } elseif (is_string($groupIdentifier) && ctype_digit(trim($groupIdentifier))) {
                 $normalizedGroupIdentifier = (int) trim($groupIdentifier);
             } else {
-                throw new InvalidArgumentException('Group identifier must be a positive integer.');
+                throw new InvalidArgumentException('Identifier grup harus berupa bilangan bulat positif.');
             }
 
             if ($normalizedGroupIdentifier <= 0 || $normalizedGroupIdentifier > 9007199254740991) {
-                throw new InvalidArgumentException('Group identifier must be a positive integer.');
+                throw new InvalidArgumentException('Identifier grup harus berupa bilangan bulat positif.');
             }
 
             $normalizedGroupIdentifiers[$normalizedGroupIdentifier] = $normalizedGroupIdentifier;
@@ -236,7 +236,7 @@ final class FMSUserValidation
         $normalizedSearch = mb_substr(trim((string) ($paginationInput['search'] ?? '')), 0, 100, 'UTF-8');
         $normalizedStatus = trim((string) ($paginationInput['status'] ?? ''));
         if ($normalizedStatus !== '' && ! in_array($normalizedStatus, self::allowedStatuses(), true)) {
-            throw new InvalidArgumentException('Status filter is invalid.');
+            throw new InvalidArgumentException('Filter status tidak valid.');
         }
 
         return [

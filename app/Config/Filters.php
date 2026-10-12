@@ -19,6 +19,7 @@ use App\Filters\FMSApiKeyAuthenticationFilter;
 use App\Filters\FMSBasicAuthenticationFilter;
 use App\Filters\FMSStorageAuthenticationFilter;
 use App\Filters\FMSJwtAuthenticationFilter;
+use App\Filters\FMSAntiScannerFilter;
 
 class Filters extends BaseFilters
 {
@@ -41,6 +42,7 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'anti-scanner'  => FMSAntiScannerFilter::class,
         'fms-api-security'          => FMSApiSecurityBaselineFilter::class,
         'fms-api-authentication'    => FMSApiAuthenticationFilter::class,
         'fms-backend-authentication' => FMSBackendAuthenticationFilter::class,
@@ -83,6 +85,7 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            'anti-scanner',
             // 'honeypot',
             'csrf' => ['except' => ['api/*', 'brand/*']],
             // 'invalidchars',

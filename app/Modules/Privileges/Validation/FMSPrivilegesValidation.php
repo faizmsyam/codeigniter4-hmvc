@@ -234,15 +234,15 @@ final class FMSPrivilegesValidation
     {
         $normalizedTimestamp = trim($expirationTimestamp);
         if ($normalizedTimestamp === '') {
-            throw new InvalidArgumentException('Expiration must be a valid datetime.');
+            throw new InvalidArgumentException('Format tanggal kedaluwarsa harus berupa datetime yang valid.');
         }
 
         if (strtotime($normalizedTimestamp) === false) {
-            throw new InvalidArgumentException('Expiration must be a valid datetime.');
+            throw new InvalidArgumentException('Format tanggal kedaluwarsa harus berupa datetime yang valid.');
         }
 
         if (strtotime($normalizedTimestamp) <= time()) {
-            throw new InvalidArgumentException('Expiration must be in the future.');
+            throw new InvalidArgumentException('Tanggal kedaluwarsa harus di masa mendatang.');
         }
     }
 
