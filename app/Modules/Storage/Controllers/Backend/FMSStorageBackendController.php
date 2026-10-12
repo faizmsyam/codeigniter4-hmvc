@@ -26,6 +26,14 @@ final class FMSStorageBackendController extends FMSController
         $data['canRead'] = $auth->allows($storageUser, FMSStorageAuthorizationService::READ);
         $data['canManageSettings'] = $auth->allows($storageUser, FMSStorageAuthorizationService::SETTINGS);
         $data['canManageUsers'] = $auth->allows($storageUser, FMSStorageAuthorizationService::USERS);
+        /* Kirim daftar permission user ke JS agar tombol aksi di Object Browser di-gate. */
+        $data['userPermissions'] = array_filter([
+            FMSStorageAuthorizationService::READ      => $auth->allows($storageUser, FMSStorageAuthorizationService::READ),
+            FMSStorageAuthorizationService::UPLOAD    => $auth->allows($storageUser, FMSStorageAuthorizationService::UPLOAD),
+            FMSStorageAuthorizationService::EDIT      => $auth->allows($storageUser, FMSStorageAuthorizationService::EDIT),
+            FMSStorageAuthorizationService::DELETE    => $auth->allows($storageUser, FMSStorageAuthorizationService::DELETE),
+            FMSStorageAuthorizationService::SHARE     => $auth->allows($storageUser, FMSStorageAuthorizationService::SHARE),
+        ]);
         $data['content'] = view('App\\Modules\\Storage\\Views\\backend\\'.$view, $data);
         $data['fmsLinks'] = $this->getFmsLinks();
         $data['fmsScripts'] = $this->getFmsScripts();

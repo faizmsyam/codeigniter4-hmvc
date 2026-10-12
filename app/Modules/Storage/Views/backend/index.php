@@ -37,13 +37,18 @@
             <option value="updated_at">Diperbarui</option>
             <option value="mime">Tipe</option>
           </select>
+          <?php $perms = $userPermissions ?? []; ?>
+          <?php if (in_array('storage.upload', $perms, true)): ?>
           <label class="btn btn-primary btn-sm fms-storage-upload mb-0">
             <i class="ph-duotone ph-upload-simple me-1"></i>Upload
             <input id="fmsStorageFile" type="file" multiple hidden>
           </label>
+          <?php endif; ?>
+          <?php if (in_array('storage.edit', $perms, true)): ?>
           <button id="fmsStorageNewFolder" type="button" class="btn btn-outline-primary btn-sm" title="Buat folder" aria-label="Buat folder">
             <i class="ph-duotone ph-folder-simple-plus me-1"></i>Folder
           </button>
+          <?php endif; ?>
 
           <button id="fmsStorageRefresh" type="button" class="btn btn-outline-secondary btn-sm fms-storage-icon-btn" title="Muat ulang" aria-label="Muat ulang"><i class="ph-duotone ph-arrows-clockwise"></i></button>
         </div>

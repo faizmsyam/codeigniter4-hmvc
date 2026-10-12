@@ -7,7 +7,7 @@
     'fmsLinks' => $fmsLinks ?? '',
     'fmsScripts' => $fmsScripts ?? '',
 ]) ?>
-<body class="fms-storage-shell">
+<body class="fms-storage-shell" data-storage-permissions="<?= esc(implode(',', array_keys($userPermissions ?? [])), 'attr') ?>">
   <div class="fms-storage-app min-vh-100 d-flex flex-column">
     <header class="fms-storage-header border-bottom bg-body">
       <div class="container-fluid px-4 py-3 d-flex align-items-center justify-content-between">

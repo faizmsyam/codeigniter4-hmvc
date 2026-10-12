@@ -232,6 +232,18 @@
     let currentPage = 1;
     const perPage = 100;
 
+    /* Permission user (dikirim backend via data-storage-permissions di <body>). */
+    const PERMS = (function () {
+      const raw = document.querySelector('[data-storage-permissions]');
+      const list = raw ? String(raw.dataset.storagePermissions || '').split(',').filter(Boolean) : [];
+      return {
+        upload: list.indexOf('storage.upload') !== -1,
+        edit: list.indexOf('storage.edit') !== -1,
+        del: list.indexOf('storage.delete') !== -1,
+        share: list.indexOf('storage.share') !== -1
+      };
+    })();
+
     function fmt(n) {
       n = Number(n) || 0;
       return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
@@ -283,7 +295,11 @@
             const tr = document.createElement('tr');
             tr.className = 'fms-storage-row-folder';
             const folderKey = encodeURIComponent(f.prefix);
-            tr.innerHTML = '<td><i class="ph-duotone ph-folder me-2 text-warning"></i><span class="fms-storage-row-name">' + esc(f.name) + '</span></td><td>Folder</td><td>—</td><td>—</td><td class="text-end fms-storage-row-actions"><button type="button" class="btn btn-sm btn-outline-secondary fms-storage-list-action me-1" data-action="rename" data-kind="folder" data-key="' + esc(folderKey) + '" title="Rename folder" aria-label="Rename folder"><i class="ph-duotone ph-pencil-simple"></i></button><button type="button" class="btn btn-sm btn-outline-danger fms-storage-list-action" data-action="delete-folder" data-kind="folder" data-key="' + esc(folderKey) + '" title="Hapus folder kosong" aria-label="Hapus folder"><i class="ph-duotone ph-trash"></i></button></td>';
+            let folderActions = '<td class="text-end fms-storage-row-actions">';
+            if (PERMS.edit) folderActions += '<button type="button" class="btn btn-sm btn-outline-secondary fms-storage-list-action me-1" data-action="rename" data-kind="folder" data-key="' + esc(folderKey) + '" title="Rename folder" aria-label="Rename folder"><i class="ph-duotone ph-pencil-simple"></i></button>';
+            if (PERMS.del) folderActions += '<button type="button" class="btn btn-sm btn-outline-danger fms-storage-list-action" data-action="delete-folder" data-kind="folder" data-key="' + esc(folderKey) + '" title="Hapus folder kosong" aria-label="Hapus folder"><i class="ph-duotone ph-trash"></i></button>';
+            folderActions += '</td>';
+            tr.innerHTML = '<td><i class="ph-duotone ph-folder me-2 text-warning"></i><span class="fms-storage-row-name">' + esc(f.name) + '</span></td><td>Folder</td><td>—</td><td>—</td>' + folderActions;
             tr.onclick = function (event) {
               if (event.target.closest('[data-action]')) return;
               load(f.prefix);
@@ -293,14 +309,16 @@
           (result.files || []).forEach(function (o) {
             const tr = document.createElement('tr');
             const key = encodeURIComponent(o.key);
+            let fileActions = '<td class="text-end fms-storage-row-actions">';
+            fileActions += '<button type="button" class="btn btn-sm btn-outline-info fms-storage-list-action me-1" data-action="preview" data-key="' + key + '" title="Preview" aria-label="Preview"><i class="ph-duotone ph-eye"></i></button>';
+            fileActions += '<button type="button" class="btn btn-sm btn-outline-secondary fms-storage-list-action me-1" data-action="metadata" data-key="' + key + '" title="Detail" aria-label="Detail"><i class="ph-duotone ph-info"></i></button>';
+            if (PERMS.edit) fileActions += '<button type="button" class="btn btn-sm btn-outline-secondary fms-storage-list-action me-1" data-action="rename" data-key="' + key + '" title="Rename" aria-label="Rename"><i class="ph-duotone ph-pencil-simple"></i></button>';
+            if (PERMS.share) fileActions += '<button type="button" class="btn btn-sm btn-outline-primary fms-storage-list-action me-1" data-action="share" data-key="' + key + '" title="Share" aria-label="Share"><i class="ph-duotone ph-share-network"></i></button>';
+            if (PERMS.del) fileActions += '<button type="button" class="btn btn-sm btn-outline-danger fms-storage-list-action" data-action="delete" data-key="' + key + '" title="Hapus" aria-label="Hapus"><i class="ph-duotone ph-trash"></i></button>';
+            fileActions += '</td>';
             tr.innerHTML = '<td><i class="ph-duotone ph-file me-2"></i><span class="fms-storage-row-name">' + esc(o.name) + '</span></td>'
               + '<td>' + esc(o.mime) + '</td><td>' + fmt(o.size) + '</td><td>' + esc(o.updated_at) + '</td>'
-              + '<td class="text-end fms-storage-row-actions">'
-              + '<button type="button" class="btn btn-sm btn-outline-info fms-storage-list-action me-1" data-action="preview" data-key="' + key + '" title="Preview" aria-label="Preview"><i class="ph-duotone ph-eye"></i></button>'
-              + '<button type="button" class="btn btn-sm btn-outline-secondary fms-storage-list-action me-1" data-action="metadata" data-key="' + key + '" title="Detail" aria-label="Detail"><i class="ph-duotone ph-info"></i></button>'
-              + '<button type="button" class="btn btn-sm btn-outline-secondary fms-storage-list-action me-1" data-action="rename" data-key="' + key + '" title="Rename" aria-label="Rename"><i class="ph-duotone ph-pencil-simple"></i></button>'
-              + '<button type="button" class="btn btn-sm btn-outline-primary fms-storage-list-action me-1" data-action="share" data-key="' + key + '" title="Share" aria-label="Share"><i class="ph-duotone ph-share-network"></i></button>'
-              + '<button type="button" class="btn btn-sm btn-outline-danger fms-storage-list-action" data-action="delete" data-key="' + key + '" title="Hapus" aria-label="Hapus"><i class="ph-duotone ph-trash"></i></button></td>';
+              + fileActions;
             body.appendChild(tr);
           });
           if (!body.children.length) {
@@ -560,7 +578,15 @@
       const action = e.target.closest('[data-action]');
       if (!action) return;
       const key = decodeURIComponent(action.dataset.key || '');
-      if (action.dataset.action === 'rename') {
+      const act = action.dataset.action;
+
+      /* Guard permission (kalau tombol lolos gate server-side — tidak seharusnya). */
+      if ((act === 'rename') && !PERMS.edit) { FMS.toast('Tidak punya izin edit.', false); return; }
+      if ((act === 'delete' || act === 'delete-folder') && !PERMS.del) { FMS.toast('Tidak punya izin hapus.', false); return; }
+      if (act === 'share' && !PERMS.share) { FMS.toast('Tidak punya izin share.', false); return; }
+      /* Preview & metadata: tidak butuh permission khusus (baca saja). */
+
+      if (act === 'rename') {
         const isFolder = action.dataset.kind === 'folder';
         const currentName = key.split('/').pop();
         promptRename(isFolder ? 'Rename Folder' : 'Rename Object', currentName, function (name) {
@@ -575,7 +601,7 @@
         });
         return;
       }
-      if (action.dataset.action === 'delete-folder') {
+      if (act === 'delete-folder') {
         const folderPrefix = key.replace(/\/+$/, '');
         FMS.confirm({
           title: 'Hapus Folder',
@@ -594,7 +620,7 @@
         });
         return;
       }
-      if (action.dataset.action === 'delete') {
+      if (act === 'delete') {
         FMS.confirm({
           title: 'Konfirmasi Hapus',
           message: 'Object ini akan dihapus permanen. Lanjutkan?',
@@ -612,10 +638,10 @@
         });
       }
 
-      if (action.dataset.action === 'metadata' || action.dataset.action === 'preview') {
+      if (act === 'metadata' || act === 'preview') {
         FMS.get(api + '/objects/metadata', { key: key }, { blockUI: true })
           .then(function (meta) {
-            if (action.dataset.action === 'preview') {
+            if (act === 'preview') {
               const previewUrl = api + '/preview?key=' + encodeURIComponent(key);
               const previewWindow = window.open(previewUrl, '_blank', 'noopener');
               if (!previewWindow) FMS.toast('Popup preview diblokir browser.', false);
@@ -646,7 +672,7 @@
           });
       }
 
-      if (action.dataset.action === 'share') {
+      if (act === 'share') {
         FMS.post(api + '/share', { key: key, ttl: 3600 }, { blockUI: true })
           .then(function (result) {
             if (result.url) {
