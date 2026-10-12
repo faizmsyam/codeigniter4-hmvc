@@ -70,6 +70,8 @@ final class FMSStorageObjectService
             if (!$file->isFile() || $file->isLink()) continue;
             $key = $this->logicalKey(ltrim(str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($base))), '/'));
             if ($key === '') continue;
+            // Skip dotfile system (DS_Store, ._* Mac metadata, .git, etc.)
+            if (str_starts_with(basename($key), '.')) continue;
             $allItems[] = [
                 'key' => $key,
                 'name' => basename($key),
@@ -97,6 +99,7 @@ final class FMSStorageObjectService
             foreach (new \FilesystemIterator($realDirectory, \FilesystemIterator::SKIP_DOTS) as $entry) {
                 if (! $entry->isDir() || $entry->isLink()) continue;
                 $name = $entry->getFilename();
+                if (str_starts_with($name, '.')) continue;
                 if (! isset($seen[$name])) {
                     $folders[] = ['name' => $name, 'prefix' => $searchPrefix . $name];
                     $seen[$name] = true;
@@ -220,10 +223,13 @@ final class FMSStorageObjectService
         // Nama asli tanpa path: buang komponen direktori (webkitRelativePath bisa "folder\file.txt").
         $name = str_replace('\\', '/', $file->getClientName() ?: 'object');
         $name = basename($name);
+        // Tolak dotfile sistem (.DS_Store, ._*, .git*) — tidak boleh masuk storage.
+        if ($name === '' || str_starts_with($name, '.')) {
+            throw new InvalidArgumentException('Nama file tidak diizinkan (file tersembunyi/sistem).');
+        }
         // Buang karakter yang tidak aman di key: sisakan huruf/angka/._-
         $name = preg_replace('/[^A-Za-z0-9._-]+/', '_', $name) ?: 'object';
         $name = ltrim($name, '.') ?: 'object';
-        $extension = $storage->extensionForMime($mime);
 
         $keyPrefix = trim(str_replace('\\', '/', $prefix), '/');
         if ($keyPrefix !== '' && preg_match('#^(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+$#', $keyPrefix) !== 1) {
