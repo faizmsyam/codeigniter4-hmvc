@@ -624,6 +624,10 @@
     }
 
     if (dropzone) {
+      /* Tanpa izin upload, dropzone tidak dirender — jangan pasang handler. */
+      if (!PERMS.upload) {
+        dropzone.remove();
+      } else {
       ['dragenter', 'dragover'].forEach(function (eventName) {
         dropzone.addEventListener(eventName, function (e) {
           e.preventDefault();
@@ -665,6 +669,7 @@
       dropzone.addEventListener('click', function () {
         if (uploadInput) uploadInput.click();
       });
+      }
     }
 
     body.addEventListener('click', function (e) {
