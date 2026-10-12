@@ -137,7 +137,7 @@
     saveBtn.addEventListener('click', function () {
       FMS.post(url, { allowed_mime_types: collect() }, { blockUI: true })
         .then(function (result) {
-          const data = (result && result.data) || {};
+          const data = (result && result.data) || result || {};
           const saved = data.allowed_mime_types || [];
           FMS.toast('MIME diizinkan disimpan (' + saved.length + ' tipe).', true);
           load();
