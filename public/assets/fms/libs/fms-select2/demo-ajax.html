@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FMS Select2 — Contoh AJAX</title>
+  <link rel="stylesheet" href="css/fms-select2.css">
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 720px; }
+    .field { margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: .35rem; font-size: .85rem; font-weight: 600; }
+    .log { background:#0f172a; color:#7dd3fc; padding:1rem; border-radius:.4rem;
+           font-family: ui-monospace, monospace; font-size:.75rem; white-space:pre-wrap;
+           max-height: 220px; overflow:auto; }
+    :root {
+      --primary-color: #845adf; --input-border: #e2e8ee; --form-control-bg: #fff;
+      --custom-white: #fff; --default-text-color: #011a42; --text-muted: #5d6576;
+      --default-background: #f9f7fc; --danger-rgb: 220 53 69;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>FMS Select2 — AJAX</h1>
+
+  <div class="field">
+    <label>Tujuan Surat (multiple, remote, paginated)</label>
+    <select id="kepada" name="kepada[]" multiple></select>
+    <small style="color:#5d6576">Scroll dropdown sampai bawah → otomatis memuat halaman berikutnya (infinite scroll).</small>
+  </div>
+
+  <div class="field">
+    <label>Pegawai (single, remote)</label>
+    <select id="pengirim" name="pengirim"></select>
+  </div>
+
+  <h4>Log request</h4>
+  <div class="log" id="log"></div>
+
+  <script src="js/fms-select2.js"></script>
+  <script>
+    "use strict";
+
+    var logEl = document.getElementById("log");
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    /* ---------- Data dummy pengganti backend ---------- */
+    var PEGAWAI = [];
+    var NAMA = ["Andi Prasetyo","Budi Santoso","Citra Ayu","Dewi Lestari","Eko Nugroho",
+      "Fitri Handayani","Gunawan Saputra","Hesti Wulandari","Irfan Maulana","Joko Susilo",
+      "Kartika Sari","Lukman Hakim","Maya Anggraini","Nanda Pratama","Oki Setiana",
+      "Putri Amelia","Rahmat Hidayat","Siti Nurhaliza","Taufik Hidayat","Umar Bakri",
+      "Vina Panduwinata","Wahyu Siregar","Yuni Shara","Zainal Abidin","Agus Salim"];
+    NAMA.forEach(function (nama, i) {
+      PEGAWAI.push({ id: "p-" + (i + 1), text: nama, nip: "1990" + (i + 1), jabatan: "Staf" });
+    });
+
+    /* ---------- Mock "endpoint" masterdata/list-pegawai ---------- */
+    function mockEndpoint(params) {
+      var q = (params.q || "").toLowerCase();
+      var page = parseInt(params.page || 1, 10);
+      var perPage = 10;
+
+      var filtered = PEGAWAI.filter(function (p) {
+        return !q || p.text.toLowerCase().indexOf(q) !== -1;
+      });
+      var slice = filtered.slice((page - 1) * perPage, page * perPage);
+
+      log("GET ?q=" + params.q + "&page=" + page + "&kode_unor=" + params.kode_unor +
+          "  -> " + slice.length + " dari " + filtered.length);
+
+      return { data: slice, total: filtered.length };
+    }
+
+    /* ---------- formatResult / formatSelection gaya lama ---------- */
+    function formatResultSelectPegawai(data) {
+      if (data.loading) { return data.text; }
+      return '<span><strong>' + data.text + '</strong>' +
+        '<br><small>NIP ' + (data.nip || "-") + '</small></span>';
+    }
+    function formatSelectionSelectPegawai(data) {
+      return data.text;
+    }
+
+    var KODE_UNOR = "01.02.03";
+
+    /* =====================================================
+       1) MULTIPLE + AJAX (persis pola lama Anda)
+       ===================================================== */
+    FMSSelect2.init("#kepada", {
+      multiple: true,
+      placeholder: "Tujuan Surat ...",
+      minimumInputLength: 0,          // 3 = baru query setelah 3 huruf
+      ajax: {
+        type: "GET",
+        url: "masterdata/list-pegawai",
+        dataType: "JSON",
+        quietMillis: 100,
+        data: function (term, page) {
+          return {
+            q: term,
+            page: page,
+            kode_unor: KODE_UNOR
+          };
+        },
+        results: function (data, page) {
+          return {
+            results: data.data,
+            more: (page * 10) < data.total
+          };
+        },
+        // demo offline: transport diganti mock. Di produksi hapus baris ini.
+        transport: function (options, done, fail) {
+          var out = mockEndpoint(options.data);
+          setTimeout(function () { done(out); }, 120);
+        }
+      },
+      formatResult: formatResultSelectPegawai,
+      formatSelection: formatSelectionSelectPegawai,
+      escapeMarkup: function (m) { return m; }
+    });
+
+    /* =====================================================
+       2) SINGLE + AJAX (pengirim)
+       ===================================================== */
+    FMSSelect2.init("#pengirim", {
+      placeholder: "Pilih Pengirim ...",
+      allowClear: true,
+      ajax: {
+        type: "GET",
+        url: "masterdata/list-pegawai",
+        quietMillis: 200,
+        data: function (term, page) {
+          return { q: term, page: page, kode_unor: KODE_UNOR };
+        },
+        results: function (data, page) {
+          return { results: data.data, more: (page * 10) < data.total };
+        },
+        transport: function (options, done, fail) {
+          var out = mockEndpoint(options.data);
+          setTimeout(function () { done(out); }, 120);
+        }
+      },
+      formatResult: formatResultSelectPegawai,
+      formatSelection: formatSelectionSelectPegawai,
+      escapeMarkup: function (m) { return m; }
+    });
+
+    /* ---------- contoh ambil nilai saat submit ---------- */
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        var k = FMSSelect2.getInstance(document.getElementById("kepada"));
+        log("nilai terpilih: " + JSON.stringify(k.val()));
+      }
+    });
+  </script>
+
+</body>
+</html>

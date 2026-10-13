@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FMS Select2 — Contoh Pemakaian</title>
+
+  <!-- (opsional) CSS template admin, agar variabel warna tersedia -->
+  <!-- <link rel="stylesheet" href="../../css/styles.css"> -->
+  <link rel="stylesheet" href="css/fms-select2.css">
+
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 640px; }
+    .field { margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: .35rem; font-size: .85rem; font-weight: 600; }
+    /* fallback variabel bila styles.css template tidak dimuat */
+    :root {
+      --primary-color: #845adf; --input-border: #e2e8ee; --form-control-bg: #fff;
+      --custom-white: #fff; --default-text-color: #011a42; --text-muted: #5d6576;
+      --default-background: #f9f7fc; --danger-rgb: 220 53 69;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>FMS Select2</h1>
+
+  <div class="field">
+    <label>Basic single</label>
+    <select class="js-example-basic-single" name="state">
+      <option value="s-1">Selection-1</option>
+      <option value="s-2">Selection-2</option>
+      <option value="s-3">Selection-3</option>
+      <option value="s-4">Selection-4</option>
+      <option value="s-5">Selection-5</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Basic multiple</label>
+    <select class="js-example-basic-multiple" name="states[]" multiple>
+      <option value="m-1" selected>Multiple-1</option>
+      <option value="m-2">Multiple-2</option>
+      <option value="m-3">Multiple-3</option>
+      <option value="m-4">Multiple-4</option>
+      <option value="m-5">Multiple-5</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Single + placeholder + allowClear</label>
+    <select class="js-example-placeholder-single" name="city">
+      <option value=""></option>
+      <option value="st-1">Texas</option>
+      <option value="st-2">Georgia</option>
+      <option value="st-3">California</option>
+      <option value="st-4">Washington D.C</option>
+      <option value="st-5">Virginia</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Templating (gambar + teks)</label>
+    <select class="js-example-templating" name="person">
+      <option value="p-1">Andrew</option>
+      <option value="p-2">Maya</option>
+      <option value="p-3">Brodus Axel</option>
+      <option value="p-4">Goldhens</option>
+      <option value="p-5">Angelina</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Max 3 pilihan</label>
+    <select class="js-example-basic-multiple-limit-max" multiple>
+      <option value="p-1" selected>Andrew</option>
+      <option value="p-2" selected>Maya</option>
+      <option value="p-3">Brodus Axel</option>
+      <option value="p-4">Goldhens</option>
+      <option value="p-5">Angelina</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Disabled</label>
+    <select class="js-example-disabled" disabled>
+      <option value="s-1">Selection-1</option>
+      <option value="s-2">Selection-2</option>
+    </select>
+  </div>
+
+  <!-- Library (tanpa jQuery) -->
+  <script src="js/fms-select2.js"></script>
+
+  <script>
+    (function () {
+      "use strict";
+      var F = window.FMSSelect2;
+
+      function formatState(state) {
+        if (!state.id) { return state.text; }
+        // Demo mandiri: pakai avatar SVG inline (tidak bergantung file gambar).
+        // Di produksi ganti dengan, mis.:
+        //   '<span><img src="../assets/images/faces/select2/' +
+        //     state.element.value.toLowerCase() + '.jpg" class="img-flag" /> ' + state.text + '</span>'
+        var avatar = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+          '<circle cx="16" cy="16" r="16" fill="#845adf"/>' +
+          '<text x="16" y="21" font-size="14" fill="#fff" text-anchor="middle" ' +
+          'font-family="sans-serif">' + state.text.charAt(0).toUpperCase() + '</text></svg>'
+        );
+        return '<span><img src="' + avatar + '" class="img-flag" /> ' +
+          state.text + '</span>';
+      }
+
+      F.init(".js-example-basic-single");
+      F.init(".js-example-basic-multiple");
+      F.init(".js-example-placeholder-single", { placeholder: "Pilih kota", allowClear: true });
+      F.init(".js-example-templating", {
+        templateResult: formatState,
+        templateSelection: formatState,
+        placeholder: "Choose Customer"
+      });
+      F.init(".js-example-basic-multiple-limit-max", {
+        maximumSelectionLength: 3,
+        placeholder: "Choose Person"
+      });
+      F.init(".js-example-disabled");
+
+      // Contoh ambil & set nilai
+      var single = F.init(".js-example-basic-single")[0];
+      console.log("nilai awal:", single.val());
+      single.on("change", function () {
+        console.log("berubah ->", single.val());
+      });
+    })();
+  </script>
+
+</body>
+</html>

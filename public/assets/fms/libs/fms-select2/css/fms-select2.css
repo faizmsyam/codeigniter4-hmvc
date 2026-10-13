@@ -1,0 +1,610 @@
+/**
+ * FMS Select2 — stylesheet (desain meniru Select2 3.4.5)
+ * ---------------------------------------------------------------------
+ * Tampilan mengikuti CSS select2 lama (.select2-choice / .select2-drop /
+ * .select2-choices) yang dipakai form sebelumnya, dengan class di-rename
+ * ke .fms-select2-* (sesuai DOM yang dihasilkan fms-select2.js).
+ *
+ * Warna & radius mengikuti CSS template-admin FMS:
+ *   --input-border, --form-control-bg, --default-text-color,
+ *   --text-muted, --default-background, --primary-color, --gray-2
+ * Radius form template: 0.7rem.
+ *
+ * Ikon memakai inline SVG (tidak bergantung select2.png / select2x2.png /
+ * select2-spinner.gif): chevron, close, search, dan loading spinner.
+ *
+ * @version 2.3.1
+ */
+
+/* ------------------------------------------------------------------ */
+/*  Container                                                          */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-container {
+    box-sizing: border-box;
+    display: block;
+    margin: 0;
+    position: relative;
+    vertical-align: middle;
+    width: 100%;
+    max-width: 100%;
+}
+
+.fms-select2-container *,
+.fms-select2-container *::before,
+.fms-select2-container *::after,
+.fms-select2-dropdown,
+.fms-select2-dropdown *,
+.fms-select2-dropdown *::before,
+.fms-select2-dropdown *::after {
+    box-sizing: border-box;
+}
+
+.fms-select2-container .fms-select2-selection {
+    outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Single — meniru .select2-container .select2-choice                 */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-container .fms-select2-selection--single {
+    display: block;
+    width: 100%;
+    min-height: 2.375rem;
+    padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+    overflow: hidden;
+    position: relative;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+
+    border: 1px solid var(--input-border);
+    border-radius: 0.7rem;
+    background-clip: padding-box;
+
+    font-size: .875rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--default-text-color);
+    background-color: var(--form-control-bg);
+}
+
+.fms-select2-container .fms-select2-selection--single .fms-select2-selection__rendered {
+    display: block;
+    margin-right: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    line-height: 1.5;
+}
+
+.fms-select2-container .fms-select2-selection--single .fms-select2-selection__rendered.fms-select2-selection__placeholder {
+    color: var(--text-muted);
+    font-size: 1em;
+}
+
+/* panah — ikon SVG chevron (meniru .select2-arrow b) */
+.fms-select2-container .fms-select2-selection__arrow {
+    display: inline-block;
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background: transparent;
+}
+
+.fms-select2-container .fms-select2-selection__arrow b {
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border: 0;
+    transition: transform 0.15s ease;
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") no-repeat center / 12px 12px;
+}
+
+.fms-select2-container--open .fms-select2-selection__arrow b {
+    transform: rotate(180deg);
+}
+
+[dir="rtl"] .fms-select2-container .fms-select2-selection__arrow {
+    right: auto;
+    left: 0.75rem;
+}
+
+[dir="rtl"] .fms-select2-container .fms-select2-selection--single .fms-select2-selection__rendered {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+/* silang clear — ikon SVG (meniru .select2-choice abbr)
+   tampil/sembunyi diatur JS lewat inline style */
+.fms-select2-container .fms-select2-selection--single .fms-select2-selection__clear {
+    width: 12px;
+    height: 12px;
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1px;
+    line-height: 0;
+    text-decoration: none;
+    border: 0;
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M2 2l8 8M10 2l-8 8' stroke='%23011a42' stroke-width='1.6' stroke-linecap='round'/%3e%3c/svg%3e") no-repeat center / 10px 10px;
+    cursor: pointer;
+    outline: 0;
+}
+
+.fms-select2-container .fms-select2-selection--single .fms-select2-selection__clear:hover {
+    opacity: 0.6;
+}
+
+[dir="rtl"] .fms-select2-container .fms-select2-selection--single .fms-select2-selection__clear {
+    right: auto;
+    left: 24px;
+}
+
+/* saat terbuka (varian BELOW): select menyatu dengan dropdown —
+   sudut bawah select diratakan; border tetap utuh mengelilingi gabungan */
+.fms-select2-container--open .fms-select2-selection--single,
+.fms-select2-container--open .fms-select2-selection--multiple {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* open below: paksa sudut bawah rata (specificity tinggi utk single & multiple) */
+.fms-select2-container.fms-select2-container--open:not(.fms-select2-container--above) > .fms-select2-selection--single,
+.fms-select2-container.fms-select2-container--open:not(.fms-select2-container--above) > .fms-select2-selection--multiple {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-bottom-color: var(--primary-color);
+}
+
+.fms-select2-container--open .fms-select2-selection__arrow {
+    border-bottom-right-radius: 0;
+}
+
+/* varian ABOVE: sudut atas select diratakan; border utuh */
+.fms-select2-container--above .fms-select2-selection--single,
+.fms-select2-container--above .fms-select2-selection--multiple {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-color: var(--primary-color);
+    border-top-color: var(--primary-color);
+    border-bottom-left-radius: 0.7rem;
+    border-bottom-right-radius: 0.7rem;
+}
+
+/* fokus / open (meniru .select2-container-active) */
+.fms-select2-container.fms-select2-container--open .fms-select2-selection--single,
+.fms-select2-container .fms-select2-selection--single:focus {
+    color: var(--default-text-color);
+    background-color: var(--form-control-bg);
+    border-color: var(--primary-color);
+    outline: 0;
+}
+
+.fms-select2-container.fms-select2-container--open .fms-select2-selection--multiple {
+    border-color: var(--primary-color);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Multiple — meniru .select2-container-multi .select2-choices        */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-container .fms-select2-selection--multiple {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    min-height: 2.375rem;
+    padding: 0.25rem 2.5rem 0.25rem 0.5rem;   /* seimbang, kanan utk panah */
+    overflow: hidden;
+    position: relative;
+    cursor: text;
+    user-select: none;
+    -webkit-user-select: none;
+
+    border: 1px solid var(--input-border);
+    border-radius: 0.7rem;
+    background-clip: padding-box;
+
+    font-size: .875rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--default-text-color);
+    background-color: var(--form-control-bg);
+}
+
+[dir="rtl"] .fms-select2-container .fms-select2-selection--multiple {
+    padding: 0.25rem 0.5rem 0.25rem 2.5rem;
+}
+
+.fms-select2-container.fms-select2-container--open .fms-select2-selection--multiple {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__rendered {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: 0 1 auto;      /* chips ambil lebar sesuai isi */
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* saat belum ada chip, list tidak makan ruang supaya placeholder rata kiri */
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__rendered:empty {
+    display: none;
+}
+
+/* chip — meniru .select2-search-choice (silang pakai SVG) */
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice {
+    padding: 2px 20px 2px 6px;      /* ruang silang di kanan */
+    margin: 0.125rem 0.25rem;       /* 2px/4px, seimbang dgn search field */
+    position: relative;
+    white-space: nowrap;
+    line-height: 1.35;
+    color: var(--default-text-color);
+    cursor: default;
+
+    border: 1px solid var(--input-border);
+    border-radius: 0.35rem;
+    background-color: var(--gray-2);
+
+    box-shadow: 0 0 2px rgba(255, 255, 255, 0.6) inset, 0 1px 0 rgba(0, 0, 0, 0.05);
+    display: inline-flex;
+    align-items: center;
+    max-width: 97%;
+    box-sizing: border-box;
+}
+
+[dir="rtl"] .fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice {
+    padding: 2px 6px 2px 20px;
+}
+
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice__display {
+    font-size: 0.8125rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* silang chip — ikon SVG (meniru .select2-search-choice-close) */
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice__remove {
+    display: block;
+    width: 12px;
+    height: 13px;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1px;
+    line-height: 0;
+    outline: none;
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M2 2l8 8M10 2l-8 8' stroke='%23011a42' stroke-width='1.6' stroke-linecap='round'/%3e%3c/svg%3e") no-repeat center / 8px 8px;
+    cursor: pointer;
+}
+
+[dir="rtl"] .fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice__remove {
+    right: auto;
+    left: 4px;
+}
+
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice__remove:hover {
+    opacity: 0.6;
+}
+
+/* search input inline — meniru .select2-search-field input */
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-search__field {
+    background: transparent !important;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    outline: 0;
+    padding: 2px 0;
+    margin: 0 4px;
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 4rem;
+    min-height: 1.5rem;
+    height: 1.5rem;
+    line-height: 1.5;
+    color: var(--default-text-color);
+    font-family: inherit;
+    font-size: 0.875rem;
+}
+
+.fms-select2-container .fms-select2-selection--multiple .fms-select2-search__field::placeholder {
+    color: var(--text-muted);
+    font-size: 1em;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Search field di dropdown — meniru .select2-search input            */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-search {
+    display: inline-block;
+    width: 100%;
+    min-height: 26px;
+    margin: 0;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    position: relative;
+    white-space: nowrap;
+}
+
+.fms-select2-search--dropdown {
+    display: block;
+    padding: 0.5rem 0.5rem 0.375rem;
+}
+
+.fms-select2-search__field {
+    width: 100%;
+    height: auto !important;
+    min-height: 26px;
+    padding: 4px 20px 4px 5px;
+    margin: 0;
+    outline: 0;
+    font-family: inherit;
+    font-size: 1em;
+    color: var(--default-text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 0.35rem;
+    background-color: var(--form-control-bg);
+    box-shadow: none;
+}
+
+.fms-select2-search__field:focus-visible {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* placeholder kolom pencarian dropdown */
+.fms-select2-search--dropdown .fms-select2-search__field::placeholder {
+    color: var(--text-muted);
+    font-size: 1em;
+}
+
+/* loading AJAX pada search field — SVG spinner */
+.fms-select2-search__field.fms-select2-active {
+    background: var(--form-control-bg) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cg fill='none' stroke='%23845adf' stroke-width='2' stroke-linecap='round'%3e%3cpath d='M8 2a6 6 0 0 1 6 6'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 8 8' to='360 8 8' dur='0.8s' repeatCount='indefinite'/%3e%3c/path%3e%3c/g%3e%3c/svg%3e") no-repeat right 6px center !important;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dropdown — meniru .select2-drop                                    */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-dropdown {
+    width: 100%;
+    margin-top: -1px;
+    position: absolute;
+    z-index: 1056;
+
+    background: var(--form-control-bg);
+    color: var(--default-text-color);
+    border: 1px solid var(--input-border);
+    border-top: 0;
+    border-radius: 0 0 0.7rem 0.7rem;
+    box-shadow: 0 4px 5px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
+    display: block;
+    overflow: hidden;
+}
+
+.fms-select2-dropdown--above {
+    margin-top: 1px;
+    border-top: 1px solid var(--input-border);
+    border-bottom: 0;
+    border-radius: 0.7rem 0.7rem 0 0;
+    box-shadow: 0 -4px 5px rgba(0, 0, 0, 0.15);
+}
+
+.fms-select2-dropdown--above .fms-select2-search--dropdown {
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+}
+
+.fms-select2-dropdown--above .fms-select2-search__field {
+    margin-top: 4px;
+}
+
+/* warna border saat aktif — select dan dropdown berbagi garis sambungan */
+.fms-select2-container--open .fms-select2-dropdown--below {
+    border-color: var(--primary-color);
+    border-top: 0;
+}
+
+.fms-select2-container--open .fms-select2-dropdown--above {
+    border-color: var(--primary-color);
+    border-bottom: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Results — meniru .select2-results                                  */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-results__options {
+    list-style: none;
+    margin: 0;
+    padding: 0.375rem 0.5rem 0.5rem;
+    max-height: 250px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+}
+
+.fms-select2-results__option {
+    list-style: none;
+    display: list-item;
+    background-image: none;
+    color: var(--default-text-color);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.fms-select2-results__option--selectable {
+    padding: 0.5rem 0.625rem;
+    margin: 0;
+    min-height: 2rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* hover / highlighted — primary versi gelap + teks putih */
+.fms-select2-results__option--highlighted.fms-select2-results__option--selectable {
+    border-radius: 0.5rem;
+    background-color: var(--primary-color);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6));
+    color: #fff !important;
+}
+
+.fms-select2-results__option--selected {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.fms-select2-results__option--selected.fms-select2-results__option--highlighted {
+    background-color: var(--primary-color);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6));
+    color: #fff !important;
+}
+
+.fms-select2-results__option--disabled {
+    background: var(--form-control-bg);
+    color: var(--text-muted);
+    display: list-item;
+    cursor: default;
+    opacity: 0.65;
+}
+
+.fms-select2-results__option--hidden {
+    display: none;
+}
+
+/* pesan: no results / searching / limit (meniru .select2-no-results dll) */
+.fms-select2-results__message {
+    background: var(--form-control-bg);
+    display: list-item;
+    padding: 3px 7px 4px;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.fms-select2-results__more {
+    cursor: pointer;
+}
+
+.fms-select2-results__more:hover {
+    color: var(--default-text-color);
+}
+
+/* baris loading (halaman berikutnya / infinite scroll) — SVG spinner */
+.fms-select2-results__loading {
+    color: var(--text-muted);
+    font-style: italic;
+    background: var(--form-control-bg) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cg fill='none' stroke='%23845adf' stroke-width='2' stroke-linecap='round'%3e%3cpath d='M8 2a6 6 0 0 1 6 6'%3e%3canimateTransform attributeName='transform' type='rotate' from='0 8 8' to='360 8 8' dur='0.8s' repeatCount='indefinite'/%3e%3c/path%3e%3c/g%3e%3c/svg%3e") no-repeat right 7px center;
+    padding-right: 28px;
+}
+
+/* gambar pada template result */
+.fms-select2-results__option span img,
+.fms-select2-selection__rendered span img,
+.fms-select2-selection__choice span img {
+    width: 1.45rem;
+    height: 1.45rem;
+    border-radius: 1.25rem;
+    margin-inline-end: 0.25rem;
+    vertical-align: middle;
+    object-fit: cover;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Disabled — meniru .select2-container-disabled                      */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-container--disabled .fms-select2-selection--single,
+.fms-select2-container--disabled .fms-select2-selection--multiple {
+    background-color: var(--form-control-bg);
+    background-image: none;
+    border: 1px solid var(--input-border);
+    cursor: default;
+    opacity: 0.65;
+}
+
+.fms-select2-container--disabled .fms-select2-selection__arrow b {
+    opacity: 0.4;
+}
+
+.fms-select2-container--disabled .fms-select2-selection__clear {
+    display: none !important;
+}
+
+.fms-select2-container--disabled .fms-select2-selection__choice__remove {
+    display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hidden native select (a11y) — meniru .select2-offscreen            */
+/* ------------------------------------------------------------------ */
+
+.fms-select2-hidden-accessible {
+    border: 0 !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    outline: 0 !important;
+    width: 1px !important;
+    white-space: nowrap !important;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dark mode (template: data-theme-mode="dark")                       */
+/* ------------------------------------------------------------------ */
+
+[data-theme-mode="dark"] .fms-select2-selection__arrow b,
+[data-theme-mode="dark"] .fms-select2-selection__clear,
+[data-theme-mode="dark"] .fms-select2-selection__choice__remove {
+    filter: invert(0.85);
+}
+
+[data-theme-mode="dark"] .fms-select2-container .fms-select2-selection--multiple .fms-select2-selection__choice {
+    background-color: var(--default-background);
+    border-color: var(--default-border);
+    box-shadow: none;
+}
+
+[data-theme-mode="dark"] .fms-select2-results__option--highlighted.fms-select2-results__option--selectable {
+    background-color: var(--primary-color);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6));
+    color: #fff !important;
+}
+
+[data-theme-mode="dark"] .fms-select2-results__option--selected.fms-select2-results__option--highlighted {
+    background-color: var(--primary-color);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6));
+    color: #fff !important;
+}
