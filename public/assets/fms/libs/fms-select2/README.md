@@ -275,17 +275,28 @@ s.on('fms-select2:select', (v) => console.log('dipilih', v));
 
 ---
 
-## Kompatibilitas jQuery (shim)
+## Kompatibilitas jQuery
 
 Tersedia dua jalur:
 
-1. **jQuery asli terpasang** → plugin `.select2()` otomatis dipasang pada
+1. **Tanpa jQuery (direkomendasikan)** → gunakan API vanilla
+   `FMSSelect2.init(...)`. Library **tidak** membuat global `$`/`jQuery` palsu,
+   supaya tidak bentrok dengan deteksi jQuery milik Bootstrap.
+2. **jQuery asli terpasang** → plugin `.select2()` otomatis dipasang pada
    `jQuery.fn`, jadi `$('.x').select2({...})`, `.select2('val', v)`,
-   `.select2('destroy')` tetap jalan.
-2. **Tanpa jQuery** → library menyediakan `$` minimal dengan
-   `.select2()`, `.val()`, `.prop()`, `.on()`, `.off()`, `.trigger()`, `.each()`.
+   `.select2('destroy')` tetap berjalan.
 
-Contoh kode lama yang tetap kompatibel:
+Contoh vanilla:
+
+```js
+FMSSelect2.init('#kepada', {
+  multiple: true,
+  placeholder: 'Tujuan Surat ...',
+  ajax: { /* ... */ }
+});
+```
+
+Contoh kode lama bila jQuery asli memang dimuat:
 
 ```js
 $('#kepada').select2({

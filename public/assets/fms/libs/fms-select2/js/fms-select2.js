@@ -3,23 +3,19 @@
  * ---------------------------------------------------------------------
  * Drop-in replacement for Select2 4.x used by the FMS admin template.
  *
- * Public API (jQuery-style, so existing template code keeps working):
+ * Public API (vanilla JavaScript):
  *
- *   $('.my-select').select2();                 // init, returns jQuery-ish set
- *   $('.my-select').select2({ ...options });   // init with options
- *   $('.my-select').select2('destroy');        // teardown
- *   $('.my-select').select2('open'|'close'|'toggle');
- *   $('.my-select').select2('val', value);     // get/set value
- *   $('.my-select').val();
- *   $('.my-select').prop('disabled', true);
- *   $('.my-select').on('change', fn);
- *   $('.my-select').trigger('change');
+ *   const [instance] = FMSSelect2.init('.my-select', { placeholder: '...' });
+ *   instance.open();
+ *   instance.val('s-2');
+ *   instance.close();
+ *   instance.destroy();
  *
- * Or programmatically without a jQuery object:
+ * Elemen select asli tetap dipakai untuk submit form dan event `change`.
+ * Library tidak membuat atau membutuhkan global `$` / `jQuery`.
  *
- *   const inst = FMSSelect2.init('#mySelect', { placeholder: '...' });
- *   inst.val('s-2');
- *   inst.destroy();
+ * Bila aplikasi lain kebetulan memuat jQuery asli, adapter `$.fn.select2`
+ * dapat dipasang untuk kompatibilitas kode lama; adapter ini bukan dependensi.
  *
  * Supported Select2 4.x options:
  *   placeholder, allowClear, multiple (inferred), disabled,
@@ -623,7 +619,8 @@
             var term = this.searchTerm;
 
             this.ajaxLoading = true;
-            this.setSearchActive(true);
+            // Spinner cukup pada pesan/baris hasil; input search tidak diberi loading.
+            // this.setSearchActive(true);
             if (this.ajaxPage === 1) {
                 this.renderLoadingOrMessage('searching');
             } else {
@@ -683,7 +680,8 @@
             var results = (out && out.results) ? out.results : [];
             var more = !!(out && out.more);
 
-            this.setSearchActive(false);
+            // Input search tidak memakai indikator loading.
+            // this.setSearchActive(false);
 
             if (page === 1) {
                 this.ajaxItems = [];
@@ -705,7 +703,8 @@
 
         handleAjaxError: function (err) {
             this.ajaxLoading = false;
-            this.setSearchActive(false);
+            // Input search tidak memakai indikator loading.
+            // this.setSearchActive(false);
             var self = this;
             this.results.innerHTML = '';
             var li = document.createElement('li');
@@ -1428,9 +1427,10 @@
         return wrapper;
     }
 
-    // Expose a `$`/`jQuery` that handles select2 + val/prop/on/off/trigger
-    // if the template loaded without jQuery. When a real jQuery is present we
-    // only add the plugin, so behaviour stays identical.
+    // Jangan memalsukan global `$` / `jQuery` bila jQuery asli tidak ada.
+    // Bootstrap mendeteksi window.jQuery dan mengharapkan API lengkap seperti
+    // jQuery.Event(); shim parsial membuat modal Bootstrap gagal saat show().
+    // API utama tetap vanilla: FMSSelect2.init(...).
     var realJQ = global.jQuery || global.$;
     global.HermesSelect2 = { act: act, makeWrapper: makeWrapper, toArray: toArray };
 
@@ -1439,18 +1439,5 @@
             var args = arguments;
             return act(this, args) || this;
         };
-    } else {
-        var shim = function (sel) {
-            if (typeof sel === 'function') { // $(fn)
-                if (document.readyState !== 'loading') sel();
-                else document.addEventListener('DOMContentLoaded', sel);
-                return shim('');
-            }
-            return makeWrapper(sel, shim);
-        };
-        shim.fn = shim.prototype = {};
-        shim.ready = function (fn) { fn(); };
-        global.$ = shim;
-        global.jQuery = shim;
     }
 }(typeof self !== 'undefined' ? self : this));

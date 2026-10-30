@@ -57,31 +57,22 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
     ];
 
     /**
-     * Menu ID => module_name
-     * Mengikuti urutan menu aktual (c_menus):
-     *   1 = Dashboard
-     *   3 = Brand
-     *   4 = Admin Menus
-     *   5 = User Groups
-     *   6 = Privileges
-     *   7 = Users
-     *   8 = Profil Saya
-     *   9 = Activity Logs
-     *   10 = Settings (Konfigurasi)
+     * Menu URL => module_name.
+     * URL stabil antar-environment; ID dapat bergeser mengikuti urutan insert.
      *
-     * @var array<int, string>
+     * @var array<string, string>
      */
-    private const MENU_MODULE_MAP = [
-        1 => 'dashboard',
-        3 => 'brand',
-        4 => 'menus',
-        5 => 'user_groups',
-        6 => 'privileges',
-        7 => 'users',
-        8 => 'profile',
-        9 => 'activity_logs',
-        10 => 'settings',
-        11 => 'log_monitor',
+    private const MENU_MODULE_URL_MAP = [
+        'dashboard'     => 'dashboard',
+        'brand'         => 'brand',
+        'admin-menus'   => 'menus',
+        'user-groups'   => 'user_groups',
+        'privileges'    => 'privileges',
+        'users'         => 'users',
+        'profile'       => 'profile',
+        'activity-logs' => 'activity_logs',
+        'settings'      => 'settings',
+        'log-monitor'   => 'log_monitor',
     ];
 
     /**
@@ -143,14 +134,20 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
 
         /* ── 2. Petakan seluruh permission ke menu-nya ────────────── */
         /* Mapping lama milik katalog permission bawaan dibersihkan dulu,
-         * lalu dibangun ulang persis mengikuti MENU_MODULE_MAP. Permission
+         * lalu dibangun ulang persis mengikuti MENU_MODULE_URL_MAP. Permission
          * custom (di luar MODULE_ACTIONS) tidak disentuh. */
         $catalogPermissionIds = array_values($permissionIds);
         if ($catalogPermissionIds !== []) {
             $mpTable->whereIn('permission_id', $catalogPermissionIds)->delete();
         }
 
-        foreach (self::MENU_MODULE_MAP as $menuId => $moduleName) {
+        foreach (self::MENU_MODULE_URL_MAP as $menuUrl => $moduleName) {
+            $menu = $db->table('c_menus')->where('url', $menuUrl)->get()->getRowArray();
+            if ($menu === null) {
+                continue;
+            }
+
+            $menuId        = (int) $menu['id'];
             $moduleActions = self::MODULE_ACTIONS[$moduleName] ?? [];
             foreach ($moduleActions as $action) {
                 $permKey = $moduleName . '.' . $action;

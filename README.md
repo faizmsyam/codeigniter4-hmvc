@@ -6,8 +6,8 @@ Fondasi aplikasi modular berbasis CodeIgniter 4 dengan arsitektur API-first, ver
 
 ## Teknologi
 
-- PHP `^8.1`
-- CodeIgniter `4.7.4`
+- PHP `^8.4`
+- CodeIgniter `4.7.5`
 - Composer
 - MySQL/MariaDB dengan InnoDB dan `utf8mb4`
 - PHPUnit 10

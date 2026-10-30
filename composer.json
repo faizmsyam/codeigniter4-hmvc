@@ -10,8 +10,8 @@
         "slack": "https://codeigniterchat.slack.com"
     },
     "require": {
-        "php": "^8.1",
-        "codeigniter4/framework": "4.7.4",
+        "php": "^8.4",
+        "codeigniter4/framework": "4.7.5",
         "firebase/php-jwt": "^7.2",
         "hashids/hashids": "^5.0",
         "paragonie/sodium_compat": "^1.21",
