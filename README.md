@@ -385,10 +385,15 @@ Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah 
 > Generate RSA 4096-bit butuh 10-60 detik di Windows — jangan di-cancel.
 
 ### 5. Berikan Hak Akses Tulis (Permissions) Direktori `writable/`
-Pastikan direktori cache, session, dan log dapat ditulis oleh web server / CLI:
 ```bash
-chmod -R 777 writable/
+# Linux/macOS — serahkan ke user web server, kunci ke 750/640:
+sudo chown -R www-data:www-data writable/
+find writable -type d -exec chmod 750 {} \;
+find writable -type f -exec chmod 640 {} \;
 ```
+> Ganti `www-data:www-data` dengan user PHP Anda (`php-fpm`: cek via
+> `ps aux | grep php-fpm`; shared hosting: skip chown, cukup chmod).
+> Jangan pakai `777` — key RSA di `writable/keys/` jadi bisa dibaca siapa saja.
 
 ### 6. Jalankan Migrasi Database
 Jalankan migrasi CodeIgniter 4 untuk membuat seluruh tabel sistem dan seed otomatis bawaan:
