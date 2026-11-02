@@ -6,9 +6,10 @@ use CodeIgniter\Database\Seeder;
 use RuntimeException;
 
 /**
- * Menyiapkan akun demo admin (username: faizmsyam / password: 1234567890)
- * — kredensial sama seperti superadmin programmer —
- * dan mengikatnya ke grup Administrator (id=2) supaya halaman backend
+ * Menyiapkan DUA akun demo:
+ *  - faizmsyam / 1234567890 (sama seperti superadmin programmer)
+ *  - admin / App12345 (akun demo klasik)
+ * Keduanya diikat ke grup Administrator (id=2) supaya halaman backend
  * tidak 404 karena akun tanpa grup.
  *
  * Idempoten: aman dijalankan berulang.
@@ -43,70 +44,86 @@ final class FMSAdminDemoUserSeeder extends Seeder
             ]);
         }
 
-        /* Buat atau perbarui akun admin — samakan dengan superadmin programmer. */
-        $userRow = $userTable
-            ->groupStart()
-                ->where('username_normalized', 'faizmsyam')
-                ->orWhere('email_normalized', 'faizmsyam@gmail.com')
-            ->groupEnd()
-            ->get()
-            ->getRowArray();
-
-        $userData = [
-            'username'          => 'faizmsyam',
-            'username_normalized' => 'faizmsyam',
-            'email'             => 'faizmsyam@gmail.com',
-            'email_normalized'  => 'faizmsyam@gmail.com',
-            'password_hash'     => password_hash('1234567890', PASSWORD_DEFAULT),
-            'full_name'         => 'Faiz Muhammad Syam, S.Kom., M.TI., CH',
-            'status'            => 'active',
-            'registration_source' => 'admin',
-            'email_verified_at' => $currentTimestamp,
-            'failed_login_count' => 0,
-            'locked_until'      => null,
-            'must_change_password' => 0,
-            'token_version'     => 1,
-            'session_version'   => 1,
-            'deleted_by'        => null,
-            'deleted_at'        => null,
+        /* Buat/perbarui DUA akun demo. */
+        $demoAccounts = [
+            [
+                'username'          => 'faizmsyam',
+                'username_normalized' => 'faizmsyam',
+                'email'             => 'faizmsyam@gmail.com',
+                'email_normalized'  => 'faizmsyam@gmail.com',
+                'password_hash'     => password_hash('1234567890', PASSWORD_DEFAULT),
+                'full_name'         => 'Faiz Muhammad Syam, S.Kom., M.TI., CH',
+            ],
+            [
+                'username'          => 'admin',
+                'username_normalized' => 'admin',
+                'email'             => 'admin',
+                'email_normalized'  => 'admin',
+                'password_hash'     => password_hash('App12345', PASSWORD_DEFAULT),
+                'full_name'         => 'Administrator Demo',
+            ],
         ];
 
-        if ($userRow === null) {
-            $userData['uuid'] = $this->generateUuidV4();
-            $userData['created_at'] = $currentTimestamp;
-            $userTable->insert($userData);
-            $userId = (int) $database->insertID();
-            $userTable->where('id', $userId)->update(['created_by' => $userId]);
-        } else {
-            $userId = (int) $userRow['id'];
-            $userData['updated_by'] = $userId;
-            $userData['updated_at'] = $currentTimestamp;
-            $userTable->where('id', $userId)->update($userData);
-        }
-
-        /* Ikat admin ke grup Administrator. */
         $userGroupTable = $database->table('t_user_groups');
-        $membershipRow = $userGroupTable
-            ->where('user_id', $userId)
-            ->where('group_id', $groupId)
-            ->get()
-            ->getRowArray();
 
-        if ($membershipRow === null) {
-            $userGroupTable->insert([
-                'user_id'     => $userId,
-                'group_id'    => $groupId,
-                'assigned_by' => $userId,
-                'expires_at'  => null,
-                'created_at'  => $currentTimestamp,
-            ]);
-        } else {
-            $userGroupTable
-                ->where('id', (int) $membershipRow['id'])
-                ->update([
+        foreach ($demoAccounts as $demo) {
+            $userRow = $userTable
+                ->groupStart()
+                    ->where('username_normalized', $demo['username_normalized'])
+                    ->orWhere('email_normalized', $demo['email_normalized'])
+                ->groupEnd()
+                ->get()
+                ->getRowArray();
+
+            $userData = $demo + [
+                'status'            => 'active',
+                'registration_source' => 'admin',
+                'email_verified_at' => $currentTimestamp,
+                'failed_login_count' => 0,
+                'locked_until'      => null,
+                'must_change_password' => 0,
+                'token_version'     => 1,
+                'session_version'   => 1,
+                'deleted_by'        => null,
+                'deleted_at'        => null,
+            ];
+
+            if ($userRow === null) {
+                $userData['uuid'] = $this->generateUuidV4();
+                $userData['created_at'] = $currentTimestamp;
+                $userTable->insert($userData);
+                $userId = (int) $database->insertID();
+                $userTable->where('id', $userId)->update(['created_by' => $userId]);
+            } else {
+                $userId = (int) $userRow['id'];
+                $userData['updated_by'] = $userId;
+                $userData['updated_at'] = $currentTimestamp;
+                $userTable->where('id', $userId)->update($userData);
+            }
+
+            /* Ikat ke grup Administrator. */
+            $membershipRow = $userGroupTable
+                ->where('user_id', $userId)
+                ->where('group_id', $groupId)
+                ->get()
+                ->getRowArray();
+
+            if ($membershipRow === null) {
+                $userGroupTable->insert([
+                    'user_id'     => $userId,
+                    'group_id'    => $groupId,
                     'assigned_by' => $userId,
                     'expires_at'  => null,
+                    'created_at'  => $currentTimestamp,
                 ]);
+            } else {
+                $userGroupTable
+                    ->where('id', (int) $membershipRow['id'])
+                    ->update([
+                        'assigned_by' => $userId,
+                        'expires_at'  => null,
+                    ]);
+            }
         }
 
         $database->transComplete();
