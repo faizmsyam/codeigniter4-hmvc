@@ -6,7 +6,8 @@ use CodeIgniter\Database\Seeder;
 use RuntimeException;
 
 /**
- * Menyiapkan akun demo admin (username: admin / password: App12345)
+ * Menyiapkan akun demo admin (username: faizmsyam / password: 1234567890)
+ * — kredensial sama seperti superadmin programmer —
  * dan mengikatnya ke grup Administrator (id=2) supaya halaman backend
  * tidak 404 karena akun tanpa grup.
  *
@@ -42,22 +43,22 @@ final class FMSAdminDemoUserSeeder extends Seeder
             ]);
         }
 
-        /* Buat atau perbarui akun admin. */
+        /* Buat atau perbarui akun admin — samakan dengan superadmin programmer. */
         $userRow = $userTable
             ->groupStart()
-                ->where('username_normalized', 'admin')
-                ->orWhere('email_normalized', 'admin')
+                ->where('username_normalized', 'faizmsyam')
+                ->orWhere('email_normalized', 'faizmsyam@gmail.com')
             ->groupEnd()
             ->get()
             ->getRowArray();
 
         $userData = [
-            'username'          => 'admin',
-            'username_normalized' => 'admin',
-            'email'             => 'admin',
-            'email_normalized'  => 'admin',
-            'password_hash'     => password_hash('App12345', PASSWORD_DEFAULT),
-            'full_name'         => 'Administrator Demo',
+            'username'          => 'faizmsyam',
+            'username_normalized' => 'faizmsyam',
+            'email'             => 'faizmsyam@gmail.com',
+            'email_normalized'  => 'faizmsyam@gmail.com',
+            'password_hash'     => password_hash('1234567890', PASSWORD_DEFAULT),
+            'full_name'         => 'Faiz Muhammad Syam, S.Kom., M.TI., CH',
             'status'            => 'active',
             'registration_source' => 'admin',
             'email_verified_at' => $currentTimestamp,

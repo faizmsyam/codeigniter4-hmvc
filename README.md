@@ -407,7 +407,8 @@ Aplikasi dapat diakses melalui browser:
 - **Dashboard Backend Admin**: `http://localhost:8080/fms-admin`
 - **Modul FMS Object Storage**: `http://localhost:8080/fms-storage`
 
-> **Login awal (dari seeder):** username `admin` / password `App12345`.
+> **Login awal (dari seeder):** username `faizmsyam` / password `1234567890`
+> (akun demo fms-storage disamakan dengan superadmin programmer).
 > Ganti password setelah login pertama via menu Users.
 
 ---
