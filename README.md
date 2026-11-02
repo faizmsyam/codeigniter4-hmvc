@@ -335,7 +335,7 @@ database.default.password =
 database.default.DBDriver = MySQLi
 database.default.DBPrefix = fms_
 database.default.port = 3306
-FMS_HASHIDS_SALT = FMS-2026-fmsprojects.my.id-ID-Obfuscation-9c7b4e2a
+FMS_HASHIDS_SALT = 
 FMS_HASHIDS_MIN_LENGTH = 12
 ```
 > **Catatan**: Pastikan database MySQL sudah dibuat (misal: `CREATE DATABASE db_starter_ci4;`). `FMS_HASHIDS_SALT` wajib minimal 32 karakter untuk enkripsi obfuscation ID menu & user group. Jangan pernah melakukan commit file `.env` atau kredensial rahasia ke repository.

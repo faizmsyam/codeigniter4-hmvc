@@ -52,7 +52,7 @@ CI_ENVIRONMENT = development
 # ID OBFUSCATION
 #--------------------------------------------------------------------
 
-FMS_HASHIDS_SALT=FMS-2026-fmsprojects.my.id-ID-Obfuscation-9c7b4e2a
+FMS_HASHIDS_SALT=
 FMS_HASHIDS_MIN_LENGTH=12
 
 #--------------------------------------------------------------------
