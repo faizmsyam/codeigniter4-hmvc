@@ -163,22 +163,46 @@ final class FMSApiSecurityBaselineFilter implements FilterInterface
     }
 
     /**
-     * A browser sends Origin on cross-site requests. Same-origin `fetch` from the
-     * admin UI also sends it, so only a foreign host is rejected.
+     * Origin = scheme + host + port (RFC 6454). Bandingkan utuh setelah
+     * normalisasi: scheme/host lower-case, port default dihapus, 'null'
+     * dan format invalid selalu dianggap asing.
      */
     private function hasForeignOrigin(RequestInterface $request): bool
     {
         $originHeader = trim($request->getHeaderLine('Origin'));
-        if ($originHeader === '') {
-            return false;
+        if ($originHeader === '' || strcasecmp($originHeader, 'null') === 0) {
+            return $originHeader !== '';
         }
 
-        $originHost = parse_url($originHeader, PHP_URL_HOST);
-        if (! is_string($originHost) || $originHost === '') {
+        $originParts = parse_url($originHeader);
+        if (! is_array($originParts) || ($originParts['host'] ?? '') === '') {
             return true;
         }
 
-        return strcasecmp($originHost, $request->getUri()->getHost()) !== 0;
+        $uri = $request->getUri();
+
+        return $this->normalizeOrigin($originParts) !== $this->normalizeOrigin([
+            'scheme' => $uri->getScheme(),
+            'host'   => $uri->getHost(),
+            'port'   => $uri->getPort(),
+        ]);
+    }
+
+    /**
+     * @param array{scheme?:mixed, host?:mixed, port?:mixed} $parts
+     */
+    private function normalizeOrigin(array $parts): string
+    {
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host   = strtolower((string) ($parts['host'] ?? ''));
+        $port   = isset($parts['port']) ? (int) $parts['port'] : null;
+
+        // Drop port default agar https://x.com dan https://x.com:443 sama.
+        if (($scheme === 'https' && $port === 443) || ($scheme === 'http' && $port === 80)) {
+            $port = null;
+        }
+
+        return $scheme . '://' . $host . ($port !== null ? ':' . $port : '');
     }
 
     private function reject(
