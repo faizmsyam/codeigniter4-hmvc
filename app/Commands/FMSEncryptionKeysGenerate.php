@@ -77,7 +77,10 @@ class FMSEncryptionKeysGenerate extends BaseCommand
             }
 
             $privateKeyOutput = '';
-            if (! openssl_pkey_export($resource, $privateKeyOutput)) {
+            $exportOk = $opensslCnf !== null
+                ? @openssl_pkey_export($resource, $privateKeyOutput, null, ['config' => $opensslCnf])
+                : @openssl_pkey_export($resource, $privateKeyOutput);
+            if (! $exportOk || $privateKeyOutput === '') {
                 // Fallback 2: error 80000005 saat export = RAND gagal baca seed file
                 // ($RANDFILE / .rnd). Coba arahkan ke file writable lalu retry sekali.
                 $randError = $this->drainOpenSSLErrors();
