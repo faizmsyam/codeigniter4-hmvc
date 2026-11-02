@@ -46,12 +46,24 @@ class FMSEncryptionKeysGenerate extends BaseCommand
             $config = [
                 'private_key_bits' => 4096,
                 'private_key_type' => OPENSSL_KEYTYPE_RSA,
-                'digest_alg' => 'sha256',
+                'digest_alg'      => 'sha256',
             ];
 
+            // Windows (Laragon/XAMPP): openssl_pkey_new gagal error:80000003
+            // kalau openssl.cnf tidak ketemu. Cari eksplisit, jangan andalkan default.
+            $opensslCnf = $this->resolveOpenSSLConfig();
+            if ($opensslCnf !== null) {
+                $config['config'] = $opensslCnf;
+            }
+
+            CLI::write('Generate RSA 4096-bit (bisa 10-60 dtk di Windows, jangan di-cancel)...', 'yellow');
             $resource = openssl_pkey_new($config);
             if ($resource === false) {
-                CLI::error('Gagal generate RSA key: ' . (openssl_error_string() ?: 'unknown error'));
+                CLI::error('Gagal generate RSA key: ' . $this->drainOpenSSLErrors());
+                if ($opensslCnf === null) {
+                    CLI::write('Hint Windows: set OPENSSL_CONF ke openssl.cnf PHP/Laragon/XAMPP, cth:', 'yellow');
+                    CLI::write('  set OPENSSL_CONF=C:\\laragon\\bin\\php\\php-8.4\\extras\\ssl\\openssl.cnf', 'yellow');
+                }
 
                 return EXIT_ERROR;
             }
@@ -94,5 +106,46 @@ class FMSEncryptionKeysGenerate extends BaseCommand
 
             return EXIT_ERROR;
         }
+    }
+
+    private function resolveOpenSSLConfig(): ?string
+    {
+        $fromEnv = getenv('OPENSSL_CONF');
+        if (is_string($fromEnv) && $fromEnv !== '' && is_file($fromEnv)) {
+            return $fromEnv;
+        }
+
+        $candidates = [];
+        if (PHP_OS_FAMILY === 'Windows') {
+            // Lokasi umum Laragon / XAMPP / PHP bawaan + folder instalasi PHP aktif.
+            foreach (['C:\\laragon', 'C:\\xampp', dirname(PHP_BINARY, 2), dirname(PHP_BINARY)] as $base) {
+                $candidates[] = $base . '\\bin\\php\\php-' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '\\extras\\ssl\\openssl.cnf';
+                $candidates[] = $base . '\\php\\extras\\ssl\\openssl.cnf';
+                $candidates[] = $base . '\\apache\\conf\\openssl.cnf';
+                $candidates[] = $base . '\\extras\\ssl\\openssl.cnf';
+            }
+        } else {
+            foreach (['/opt/homebrew/etc/openssl/openssl.cnf', '/usr/local/etc/openssl/openssl.cnf', '/etc/ssl/openssl.cnf'] as $path) {
+                $candidates[] = $path;
+            }
+        }
+
+        foreach (array_unique($candidates) as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    private function drainOpenSSLErrors(): string
+    {
+        $messages = [];
+        while ($message = openssl_error_string()) {
+            $messages[] = $message;
+        }
+
+        return $messages === [] ? 'unknown error' : implode(' | ', $messages);
     }
 }
