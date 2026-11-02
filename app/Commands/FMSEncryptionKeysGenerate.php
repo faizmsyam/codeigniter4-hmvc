@@ -138,12 +138,22 @@ class FMSEncryptionKeysGenerate extends BaseCommand
     private function resolveOpenSSLConfig(): ?string
     {
         $fromEnv = getenv('OPENSSL_CONF');
-        if (is_string($fromEnv) && $fromEnv !== '' && is_file($fromEnv)) {
-            putenv('OPENSSL_CONF=' . $fromEnv);
-            $_SERVER['OPENSSL_CONF'] = $fromEnv;
-            $_ENV['OPENSSL_CONF']    = $fromEnv;
+        if (is_string($fromEnv) && $fromEnv !== '') {
+            // User sering set ke folder (...\extras\ssl) bukan file.
+            // Terima keduanya: kalau folder, cari openssl.cnf di dalamnya.
+            $resolved = $this->resolveCnfPath($fromEnv);
+            if ($resolved !== null) {
+                putenv('OPENSSL_CONF=' . $resolved);
+                $_SERVER['OPENSSL_CONF'] = $resolved;
+                $_ENV['OPENSSL_CONF']    = $resolved;
 
-            return $fromEnv;
+                if ($resolved !== $fromEnv) {
+                    CLI::write('OPENSSL_CONF dikoreksi ke file: ' . $resolved, 'yellow');
+                }
+
+                return $resolved;
+            }
+            CLI::write('OPENSSL_CONF tidak valid (bukan file/folder openssl.cnf): ' . $fromEnv, 'red');
         }
 
         $candidates = [];
@@ -183,5 +193,26 @@ class FMSEncryptionKeysGenerate extends BaseCommand
         }
 
         return $messages === [] ? 'unknown error' : implode(' | ', $messages);
+    }
+
+    /**
+     * Terima path file ATAU folder. Kembalikan path file openssl.cnf atau null.
+     */
+    private function resolveCnfPath(string $path): ?string
+    {
+        if (is_file($path)) {
+            return $path;
+        }
+
+        if (is_dir($path)) {
+            foreach (['openssl.cnf', 'openssl.cfg', 'openssl.conf'] as $name) {
+                $full = rtrim($path, '/\\') . DIRECTORY_SEPARATOR . $name;
+                if (is_file($full)) {
+                    return $full;
+                }
+            }
+        }
+
+        return null;
     }
 }
