@@ -361,6 +361,29 @@ Key akan tersimpan di `writable/keys/` dan tidak di-commit ke repository (sudah 
 > ```
 > Perintah ini idempoten — aman dijalankan berulang. Tambahkan `--force` hanya jika ingin menimpa key lama dengan key baru.
 
+> **Windows (Laragon/XAMPP) — error `error:80000003` / `No such process` saat generate RSA:**
+> Itu karena `openssl.cnf` tidak ketemu. Mulai v2.5 command otomatis mencari `openssl.cnf`,
+> tapi kalau tetap gagal, set manual sebelum generate (sesuaikan versi PHP):
+> ```bat
+> REM CMD — sesi ini saja:
+> set OPENSSL_CONF=C:\laragon\bin\php\php-8.4\extras\ssl\openssl.cnf
+> php spark fms:encryption:generate --force
+>
+> REM Cek file ketemu:
+> dir "%OPENSSL_CONF%"
+> ```
+> ```powershell
+> # PowerShell — sesi ini saja:
+> $env:OPENSSL_CONF = 'C:\laragon\bin\php\php-8.4\extras\ssl\openssl.cnf'
+> php spark fms:encryption:generate --force
+>
+> # Permanen (user-level, buka terminal baru setelahnya):
+> setx OPENSSL_CONF "C:\laragon\bin\php\php-8.4\extras\ssl\openssl.cnf"
+> ```
+> Lokasi umum lain: `C:\xampp\php\extras\ssl\openssl.cnf` (XAMPP),
+> `C:\laragon\bin\php\php-8.3\extras\ssl\openssl.cnf` (sesuaikan versi).
+> Generate RSA 4096-bit butuh 10-60 detik di Windows — jangan di-cancel.
+
 ### 5. Berikan Hak Akses Tulis (Permissions) Direktori `writable/`
 Pastikan direktori cache, session, dan log dapat ditulis oleh web server / CLI:
 ```bash
@@ -383,6 +406,9 @@ Aplikasi dapat diakses melalui browser:
 - **Halaman Utama**: `http://localhost:8080`
 - **Dashboard Backend Admin**: `http://localhost:8080/fms-admin`
 - **Modul FMS Object Storage**: `http://localhost:8080/fms-storage`
+
+> **Login awal (dari seeder):** username `admin` / password `App12345`.
+> Ganti password setelah login pertama via menu Users.
 
 ---
 
