@@ -58,6 +58,14 @@ class FMSEncryptionKeysGenerate extends BaseCommand
 
             CLI::write('Generate RSA 4096-bit (bisa 10-60 dtk di Windows, jangan di-cancel)...', 'yellow');
             $resource = openssl_pkey_new($config);
+            if ($resource === false && ($config['private_key_bits'] ?? 4096) === 4096) {
+                // Fallback 1: provider default Windows sering gagal alokasi 4096-bit
+                // (RAND / I/O error). Coba 2048-bit — tetap aman untuk dev/local.
+                CLI::write('4096-bit gagal, fallback ke 2048-bit...', 'yellow');
+                $this->drainOpenSSLErrors();
+                $config['private_key_bits'] = 2048;
+                $resource                   = openssl_pkey_new($config);
+            }
             if ($resource === false) {
                 CLI::error('Gagal generate RSA key: ' . $this->drainOpenSSLErrors());
                 if ($opensslCnf === null) {
@@ -70,9 +78,28 @@ class FMSEncryptionKeysGenerate extends BaseCommand
 
             $privateKeyOutput = '';
             if (! openssl_pkey_export($resource, $privateKeyOutput)) {
-                CLI::error('Gagal export private key: ' . (openssl_error_string() ?: 'unknown error'));
+                // Fallback 2: error 80000005 saat export = RAND gagal baca seed file
+                // ($RANDFILE / .rnd). Coba arahkan ke file writable lalu retry sekali.
+                $randError = $this->drainOpenSSLErrors();
+                $randFile  = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '.rnd';
+                if (is_writable(sys_get_temp_dir()) || is_writable(dirname($randFile))) {
+                    putenv('RANDFILE=' . $randFile);
+                    $_SERVER['RANDFILE'] = $randFile;
+                    $_ENV['RANDFILE']    = $randFile;
+                    if (@openssl_pkey_export($resource, $privateKeyOutput) && $privateKeyOutput !== '') {
+                        CLI::write('Export berhasil setelah retry RANDFILE.', 'green');
+                    } else {
+                        $this->drainOpenSSLErrors();
+                        CLI::error('Gagal export private key: ' . $randError);
+                        CLI::write('Hint Windows: tutup antivirus/file-lock di folder project, lalu ulangi --force.', 'yellow');
 
-                return EXIT_ERROR;
+                        return EXIT_ERROR;
+                    }
+                } else {
+                    CLI::error('Gagal export private key: ' . $randError);
+
+                    return EXIT_ERROR;
+                }
             }
 
             if (file_put_contents($privateKeyPath, $privateKeyOutput) === false) {
@@ -112,6 +139,10 @@ class FMSEncryptionKeysGenerate extends BaseCommand
     {
         $fromEnv = getenv('OPENSSL_CONF');
         if (is_string($fromEnv) && $fromEnv !== '' && is_file($fromEnv)) {
+            putenv('OPENSSL_CONF=' . $fromEnv);
+            $_SERVER['OPENSSL_CONF'] = $fromEnv;
+            $_ENV['OPENSSL_CONF']    = $fromEnv;
+
             return $fromEnv;
         }
 
@@ -132,6 +163,11 @@ class FMSEncryptionKeysGenerate extends BaseCommand
 
         foreach (array_unique($candidates) as $path) {
             if (is_file($path)) {
+                // openssl_pkey_export spawn ulang butuh OPENSSL_CONF di env proses.
+                putenv('OPENSSL_CONF=' . $path);
+                $_SERVER['OPENSSL_CONF'] = $path;
+                $_ENV['OPENSSL_CONF']    = $path;
+
                 return $path;
             }
         }
