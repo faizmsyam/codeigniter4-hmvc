@@ -98,7 +98,7 @@ final class CreateFMSIdentityAndAuthenticationTables extends Migration
             'selector' => ['type' => 'CHAR', 'constraint' => 32],
             'validator_hash' => ['type' => 'CHAR', 'constraint' => 64],
             'purpose' => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'verify'],
-            'expires_at' => ['type' => 'TIMESTAMP'],
+            'expires_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'used_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'revoked_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'created_at' => ['type' => 'TIMESTAMP', 'default' => new RawSql('CURRENT_TIMESTAMP')],
@@ -118,8 +118,8 @@ final class CreateFMSIdentityAndAuthenticationTables extends Migration
             'token_family_id' => ['type' => 'CHAR', 'constraint' => 36],
             'selector' => ['type' => 'CHAR', 'constraint' => 32],
             'validator_hash' => ['type' => 'CHAR', 'constraint' => 64],
-            'issued_at' => ['type' => 'TIMESTAMP'],
-            'expires_at' => ['type' => 'TIMESTAMP'],
+            'issued_at' => ['type' => 'TIMESTAMP', 'null' => true],
+            'expires_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'used_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'revoked_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'replaced_by_id' => ['type' => 'BIGINT', 'unsigned' => true, 'null' => true],
@@ -140,7 +140,7 @@ final class CreateFMSIdentityAndAuthenticationTables extends Migration
     {
         $this->forge->addField([
             'jti_hash' => ['type' => 'CHAR', 'constraint' => 64],
-            'expires_at' => ['type' => 'TIMESTAMP'],
+            'expires_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'revoked_at' => ['type' => 'TIMESTAMP', 'default' => new RawSql('CURRENT_TIMESTAMP')],
         ]);
         $this->forge->addKey('jti_hash', true);
@@ -215,8 +215,8 @@ final class CreateFMSIdentityAndAuthenticationTables extends Migration
             'device_label' => ['type' => 'VARCHAR', 'constraint' => 100, 'null' => true],
             'ip_hash' => ['type' => 'CHAR', 'constraint' => 64, 'null' => true],
             'user_agent_hash' => ['type' => 'CHAR', 'constraint' => 64, 'null' => true],
-            'last_activity_at' => ['type' => 'TIMESTAMP'],
-            'expires_at' => ['type' => 'TIMESTAMP'],
+            'last_activity_at' => ['type' => 'TIMESTAMP', 'null' => true],
+            'expires_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'revoked_at' => ['type' => 'TIMESTAMP', 'null' => true],
             'created_at' => ['type' => 'TIMESTAMP', 'default' => new RawSql('CURRENT_TIMESTAMP')],
         ]);
