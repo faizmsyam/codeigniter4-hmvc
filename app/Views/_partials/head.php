@@ -150,5 +150,4 @@ $fmsPrimaryHex = '#' . implode('', array_map(
 
   <?php echo isset($fmsLinks) ? $fmsLinks : '' ?>
 
-  <?php echo isset($fmsScripts) ? $fmsScripts : '' ?>
 </head>
