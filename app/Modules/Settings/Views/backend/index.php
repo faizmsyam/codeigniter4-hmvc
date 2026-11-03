@@ -2074,7 +2074,16 @@ document.addEventListener("DOMContentLoaded", function () {
         opsLog("spark migrate --all");
         return FMS.post(OPSMIGRATE_URL, {}).then(function (body) {
           var d = (body && body.data) || {};
-
+          FMS.toast(body.message || "Migrasi selesai.", true);
+          opsLogOk("migrate ok — " + (d.migrated || 0) + " batches.");
+        }).catch(function (err) {
+          var msg = "Migrasi gagal: " + (err && err.message ? err.message : err);
+          opsLogErr(msg);
+          FMS.toast(msg, false);
+        }).finally(function () { btnOpsMig.disabled = false; });
+      }
+    });
+  });
 
   /* ── 15. Inisialisasi Pertama Kali ── */
   loadOverview();
