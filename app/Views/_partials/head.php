@@ -149,5 +149,6 @@ $fmsPrimaryHex = '#' . implode('', array_map(
   <link rel="shortcut icon" href="<?php echo esc((string) (($appBrand['favicon_url'] ?? '') ?: fmsAssets('img/media', 'favicon.ico'))) ?>">
 
   <?php echo isset($fmsLinks) ? $fmsLinks : '' ?>
+  <?php echo isset($fmsScripts) ? $fmsScripts : '' ?>
 
 </head>

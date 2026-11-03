@@ -976,7 +976,7 @@ document.addEventListener("DOMContentLoaded", function () {
     navigator.clipboard.writeText(text).then(function () {
       if (btnElement) {
         const orig = btnElement.innerHTML;
-        btnElement.innerHTML = '<i class="ri-check-line me-1"></i>Tersalin!';
+        btnElement.innerHTML = '<i class="ri-check-line me-1"><\/i>Tersalin!';
         btnElement.classList.replace("btn-outline-secondary", "btn-success");
         setTimeout(function () {
           btnElement.innerHTML = orig;
@@ -995,16 +995,16 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="card border mb-0">
           <div class="card-body">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="text-muted fs-13">${esc(title)}</span>
+              <span class="text-muted fs-13">${esc(title)}<\/span>
               <span class="avatar avatar-sm bg-${colorClass}-transparent rounded">
-                <i class="${iconClass} fs-18"></i>
-              </span>
-            </div>
-            <h5 class="fw-bold mb-1 text-${colorClass}">${esc(count)}</h5>
-            <span class="text-muted fs-12">${esc(subtitle)}</span>
-          </div>
-        </div>
-      </div>
+                <i class="${iconClass} fs-18"><\/i>
+              <\/span>
+            <\/div>
+            <h5 class="fw-bold mb-1 text-${colorClass}">${esc(count)}<\/h5>
+            <span class="text-muted fs-12">${esc(subtitle)}<\/span>
+          <\/div>
+        <\/div>
+      <\/div>
     `;
   }
 
@@ -1232,7 +1232,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const footer = document.getElementById("card-footer-apiKeysPager");
 
     if (!items || items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="ri-key-line fs-2 d-block mb-1"></i>Belum ada data API Key.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="ri-key-line fs-2 d-block mb-1"><\/i>Belum ada data API Key.<\/td><\/tr>';
       renderApiKeysSummary([]);
       footer.classList.add("d-none");
       return;
@@ -1244,41 +1244,41 @@ document.addEventListener("DOMContentLoaded", function () {
       const num = ((pagination.current_page - 1) * pagination.per_page) + idx + 1;
       let statusBadge = "";
       if (item.status === "active") {
-        statusBadge = '<span class="badge bg-success-transparent">Aktif</span>';
+        statusBadge = '<span class="badge bg-success-transparent">Aktif<\/span>';
       } else if (item.status === "revoked") {
-        statusBadge = '<span class="badge bg-danger-transparent">Dicabut</span>';
+        statusBadge = '<span class="badge bg-danger-transparent">Dicabut<\/span>';
       } else {
-        statusBadge = '<span class="badge bg-warning-transparent">Expired</span>';
+        statusBadge = '<span class="badge bg-warning-transparent">Expired<\/span>';
       }
 
       const scopesBadges = (item.scopes || []).map(function (s) {
-        return `<span class="badge bg-secondary-transparent me-1">${esc(s)}</span>`;
-      }).join("") || '<span class="text-muted">-</span>';
+        return `<span class="badge bg-secondary-transparent me-1">${esc(s)}<\/span>`;
+      }).join("") || '<span class="text-muted">-<\/span>';
 
       let actionBtns = "";
       if (item.status === "revoked") {
-        actionBtns += `<button type="button" class="btn btn-outline-success btn-glare btn-sm ms-1 js-api-activate" data-id="${esc(item.key_id)}" title="Aktifkan Kembali"><i class="ri-check-line"></i></button>`;
+        actionBtns += `<button type="button" class="btn btn-outline-success btn-glare btn-sm ms-1 js-api-activate" data-id="${esc(item.key_id)}" title="Aktifkan Kembali"><i class="ri-check-line"><\/i><\/button>`;
       } else {
-        actionBtns += `<button type="button" class="btn btn-outline-warning btn-glare btn-sm ms-1 js-api-roll" data-id="${esc(item.key_id)}" title="Regenerate Secret"><i class="ri-refresh-line"></i></button>`;
-        actionBtns += `<button type="button" class="btn btn-outline-secondary btn-glare btn-sm ms-1 js-api-revoke" data-id="${esc(item.key_id)}" title="Cabut Akses"><i class="ri-forbid-line"></i></button>`;
+        actionBtns += `<button type="button" class="btn btn-outline-warning btn-glare btn-sm ms-1 js-api-roll" data-id="${esc(item.key_id)}" title="Regenerate Secret"><i class="ri-refresh-line"><\/i><\/button>`;
+        actionBtns += `<button type="button" class="btn btn-outline-secondary btn-glare btn-sm ms-1 js-api-revoke" data-id="${esc(item.key_id)}" title="Cabut Akses"><i class="ri-forbid-line"><\/i><\/button>`;
       }
-      actionBtns += `<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-api-edit" data-id="${esc(item.key_id)}" title="Ubah"><i class="ri-pencil-line"></i></button>`;
-      actionBtns += `<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-api-del" data-id="${esc(item.key_id)}" data-label="${esc(item.label)}" title="Hapus"><i class="ri-delete-bin-line"></i></button>`;
+      actionBtns += `<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-api-edit" data-id="${esc(item.key_id)}" title="Ubah"><i class="ri-pencil-line"><\/i><\/button>`;
+      actionBtns += `<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-api-del" data-id="${esc(item.key_id)}" data-label="${esc(item.label)}" title="Hapus"><i class="ri-delete-bin-line"><\/i><\/button>`;
 
       return `
         <tr>
-          <td class="text-muted small">${num}</td>
+          <td class="text-muted small">${num}<\/td>
           <td>
-            <div class="fw-semibold">${esc(item.label)}</div>
-            <code class="fs-12 text-muted">${esc(item.key_id)}</code>
-          </td>
-          <td>${scopesBadges}</td>
-          <td><span class="badge bg-primary-transparent">${esc(item.environment)}</span></td>
-          <td class="text-center">${statusBadge}</td>
-          <td class="small">${item.expires_at ? formatDate(item.expires_at) : '<span class="text-muted">Permanen</span>'}</td>
-          <td class="small">${formatDate(item.last_used_at)}</td>
-          <td class="text-end text-nowrap">${actionBtns}</td>
-        </tr>
+            <div class="fw-semibold">${esc(item.label)}<\/div>
+            <code class="fs-12 text-muted">${esc(item.key_id)}<\/code>
+          <\/td>
+          <td>${scopesBadges}<\/td>
+          <td><span class="badge bg-primary-transparent">${esc(item.environment)}<\/span><\/td>
+          <td class="text-center">${statusBadge}<\/td>
+          <td class="small">${item.expires_at ? formatDate(item.expires_at) : '<span class="text-muted">Permanen<\/span>'}<\/td>
+          <td class="small">${formatDate(item.last_used_at)}<\/td>
+          <td class="text-end text-nowrap">${actionBtns}<\/td>
+        <\/tr>
       `;
     }).join("");
 
@@ -1310,7 +1310,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const pagination = data.pagination || { current_page: 1, per_page: state.apiKeys.perPage, total: 0 };
       renderApiKeys(items, pagination);
     }).catch(function (err) {
-      document.getElementById("tbodyApiKeys").innerHTML = `<tr><td colspan="8" class="text-center py-5 text-danger">${esc(err.message || "Gagal memuat API Key.")}</td></tr>`;
+      document.getElementById("tbodyApiKeys").innerHTML = `<tr><td colspan="8" class="text-center py-5 text-danger">${esc(err.message || "Gagal memuat API Key.")}<\/td><\/tr>`;
       document.getElementById("card-footer-apiKeysPager").classList.add("d-none");
     });
   }
@@ -1334,7 +1334,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const footer = document.getElementById("card-footer-basicPager");
 
     if (!items || items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="ri-user-switch-line fs-2 d-block mb-1"></i>Belum ada data Basic Client.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="ri-user-switch-line fs-2 d-block mb-1"><\/i>Belum ada data Basic Client.<\/td><\/tr>';
       renderBasicSummary([]);
       footer.classList.add("d-none");
       return;
@@ -1346,46 +1346,46 @@ document.addEventListener("DOMContentLoaded", function () {
       const num = ((pagination.current_page - 1) * pagination.per_page) + idx + 1;
       let statusBadge = "";
       if (item.status === "active") {
-        statusBadge = '<span class="badge bg-success-transparent">Aktif</span>';
+        statusBadge = '<span class="badge bg-success-transparent">Aktif<\/span>';
       } else if (item.status === "locked") {
-        statusBadge = `<span class="badge bg-danger-transparent"><i class="ri-lock-line me-1"></i>Terkunci (${item.failed_attempts}x)</span>`;
+        statusBadge = `<span class="badge bg-danger-transparent"><i class="ri-lock-line me-1"><\/i>Terkunci (${item.failed_attempts}x)<\/span>`;
       } else if (item.status === "revoked") {
-        statusBadge = '<span class="badge bg-secondary-transparent">Dicabut</span>';
+        statusBadge = '<span class="badge bg-secondary-transparent">Dicabut<\/span>';
       } else {
-        statusBadge = '<span class="badge bg-warning-transparent">Expired</span>';
+        statusBadge = '<span class="badge bg-warning-transparent">Expired<\/span>';
       }
 
       const scopesBadges = (item.scopes || []).map(function (s) {
-        return `<span class="badge bg-secondary-transparent me-1">${esc(s)}</span>`;
-      }).join("") || '<span class="text-muted">-</span>';
+        return `<span class="badge bg-secondary-transparent me-1">${esc(s)}<\/span>`;
+      }).join("") || '<span class="text-muted">-<\/span>';
 
       let actionBtns = "";
       if (item.status === "locked") {
-        actionBtns += `<button type="button" class="btn btn-outline-warning btn-glare btn-sm ms-1 js-basic-unlock" data-user="${esc(item.username)}" title="Buka Kunci Akun"><i class="ri-lock-unlock-line"></i></button>`;
+        actionBtns += `<button type="button" class="btn btn-outline-warning btn-glare btn-sm ms-1 js-basic-unlock" data-user="${esc(item.username)}" title="Buka Kunci Akun"><i class="ri-lock-unlock-line"><\/i><\/button>`;
       }
       if (item.status === "revoked") {
-        actionBtns += `<button type="button" class="btn btn-outline-success btn-glare btn-sm ms-1 js-basic-activate" data-user="${esc(item.username)}" title="Aktifkan Kembali"><i class="ri-check-line"></i></button>`;
+        actionBtns += `<button type="button" class="btn btn-outline-success btn-glare btn-sm ms-1 js-basic-activate" data-user="${esc(item.username)}" title="Aktifkan Kembali"><i class="ri-check-line"><\/i><\/button>`;
       } else {
-        actionBtns += `<button type="button" class="btn btn-outline-secondary btn-glare btn-sm ms-1 js-basic-revoke" data-user="${esc(item.username)}" title="Cabut Akses"><i class="ri-forbid-line"></i></button>`;
+        actionBtns += `<button type="button" class="btn btn-outline-secondary btn-glare btn-sm ms-1 js-basic-revoke" data-user="${esc(item.username)}" title="Cabut Akses"><i class="ri-forbid-line"><\/i><\/button>`;
       }
-      actionBtns += `<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-basic-reset-pw" data-user="${esc(item.username)}" title="Reset Password"><i class="ri-key-line"></i></button>`;
-      actionBtns += `<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-basic-edit" data-user="${esc(item.username)}" title="Ubah"><i class="ri-pencil-line"></i></button>`;
-      actionBtns += `<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-basic-del" data-user="${esc(item.username)}" data-label="${esc(item.label || item.username)}" title="Hapus"><i class="ri-delete-bin-line"></i></button>`;
+      actionBtns += `<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-basic-reset-pw" data-user="${esc(item.username)}" title="Reset Password"><i class="ri-key-line"><\/i><\/button>`;
+      actionBtns += `<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-basic-edit" data-user="${esc(item.username)}" title="Ubah"><i class="ri-pencil-line"><\/i><\/button>`;
+      actionBtns += `<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-basic-del" data-user="${esc(item.username)}" data-label="${esc(item.label || item.username)}" title="Hapus"><i class="ri-delete-bin-line"><\/i><\/button>`;
 
       return `
         <tr>
-          <td class="text-muted small">${num}</td>
+          <td class="text-muted small">${num}<\/td>
           <td>
-            <div class="fw-semibold font-monospace">${esc(item.username)}</div>
-            <small class="text-muted">${esc(item.label || "-")}</small>
-          </td>
-          <td>${scopesBadges}</td>
-          <td><span class="badge bg-primary-transparent">${esc(item.environment)}</span></td>
-          <td class="text-center">${statusBadge}</td>
-          <td class="small">${item.expires_at ? formatDate(item.expires_at) : '<span class="text-muted">Permanen</span>'}</td>
-          <td class="small">${formatDate(item.last_used_at)}</td>
-          <td class="text-end text-nowrap">${actionBtns}</td>
-        </tr>
+            <div class="fw-semibold font-monospace">${esc(item.username)}<\/div>
+            <small class="text-muted">${esc(item.label || "-")}<\/small>
+          <\/td>
+          <td>${scopesBadges}<\/td>
+          <td><span class="badge bg-primary-transparent">${esc(item.environment)}<\/span><\/td>
+          <td class="text-center">${statusBadge}<\/td>
+          <td class="small">${item.expires_at ? formatDate(item.expires_at) : '<span class="text-muted">Permanen<\/span>'}<\/td>
+          <td class="small">${formatDate(item.last_used_at)}<\/td>
+          <td class="text-end text-nowrap">${actionBtns}<\/td>
+        <\/tr>
       `;
     }).join("");
 
@@ -1417,7 +1417,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const pagination = data.pagination || { current_page: 1, per_page: state.basic.perPage, total: 0 };
       renderBasicClients(items, pagination);
     }).catch(function (err) {
-      document.getElementById("tbodyBasicClients").innerHTML = `<tr><td colspan="8" class="text-center py-5 text-danger">${esc(err.message || "Gagal memuat Basic Client.")}</td></tr>`;
+      document.getElementById("tbodyBasicClients").innerHTML = `<tr><td colspan="8" class="text-center py-5 text-danger">${esc(err.message || "Gagal memuat Basic Client.")}<\/td><\/tr>`;
       document.getElementById("card-footer-basicPager").classList.add("d-none");
     });
   }
@@ -1979,7 +1979,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!con) return;
     var line = document.createElement("div");
     var time = new Date().toLocaleTimeString("id-ID", { hour12: false });
-    line.innerHTML = '<span style="color:#8b949e">[' + esc(time) + ']</span> <span style="color:#58a6ff">fms-ops $</span> <span class="' + (cls || "") + '">' + html + "</span>";
+    line.innerHTML = '<span style="color:#8b949e">[' + esc(time) + ']<\/span> <span style="color:#58a6ff">fms-ops $<\/span> <span class="' + (cls || "") + '">' + html + "<\/span>";
     con.appendChild(line);
     con.scrollTop = con.scrollHeight;
   }
@@ -1989,7 +1989,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var con = document.getElementById("opsConsole");
     if (!con) return;
     var line = document.createElement("div");
-    line.innerHTML = '<span style="color:#f85149">' + esc(msg) + "</span>";
+    line.innerHTML = '<span style="color:#f85149">' + esc(msg) + "<\/span>";
     con.appendChild(line);
     con.scrollTop = con.scrollHeight;
   }
@@ -1997,7 +1997,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var btnOpsClear = document.getElementById("btnOpsClear");
   if (btnOpsClear) btnOpsClear.addEventListener("click", function () {
     var con = document.getElementById("opsConsole");
-    if (con) con.innerHTML = '<span class="text-muted">fms-ops $ console dibersihkan.</span>';
+    if (con) con.innerHTML = '<span class="text-muted">fms-ops $ console dibersihkan.<\/span>';
   });
 
   function fmtTime(ts) {
@@ -2007,21 +2007,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function loadOpsKeyStatus() {
     var box = document.getElementById("opsKeyStatus");
-    if (box) box.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memuat status...';
+    if (box) box.innerHTML = '<span class="spinner-border spinner-border-sm me-1"><\/span>Memuat status...';
     opsLog("spark settings:ops keys:status");
     FMS.get(OPSKEYS_URL).then(function (body) {
       var keys = (body && body.data && body.data.keys) || {};
       var rows = Object.keys(keys).map(function (k) {
         var v = keys[k] || {};
-        var badge = v.exists ? '<span class="badge bg-success-transparent">ADA</span>' : '<span class="badge bg-danger-transparent">BELUM</span>';
-        return "<div class='d-flex justify-content-between border-bottom py-1'><span><code>" + esc(k) + "</code> " + badge + "</span><span class='text-muted'>" + esc(fmtTime(v.mtime)) + "</span></div>";
+        var badge = v.exists ? '<span class="badge bg-success-transparent">ADA<\/span>' : '<span class="badge bg-danger-transparent">BELUM<\/span>';
+        return "<div class='d-flex justify-content-between border-bottom py-1'><span><code>" + esc(k) + "<\/code> " + badge + "<\/span><span class='text-muted'>" + esc(fmtTime(v.mtime)) + "<\/span><\/div>";
       });
       if (box) box.innerHTML = rows.length ? rows.join("") : "Belum ada data.";
       opsLogOk("status ok — " + Object.keys(keys).length + " key diperiksa.");
     }).catch(function (err) {
       var msg = "Gagal memuat status: " + (err && err.message ? err.message : err);
       if (box) box.innerHTML = esc(msg) + ' <button type="button" class="btn btn-light btn-sm ms-2" onclick="loadOpsKeyStatus()">'
-        + '<i class="ri-refresh-line me-1"></i>Coba Lagi</button>';
+        + '<i class="ri-refresh-line me-1"><\/i>Coba Lagi<\/button>';
       opsLogErr(msg);
     });
   }
