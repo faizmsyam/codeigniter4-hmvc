@@ -158,6 +158,66 @@ class Database extends Config
     //    ];
 
     /**
+     * Koneksi production (override via env database.production.*).
+     */
+    public array $production = [
+        'DSN'          => '',
+        'hostname'     => 'localhost',
+        'username'     => '',
+        'password'     => '',
+        'database'     => '',
+        'DBDriver'     => 'MySQLi',
+        'DBPrefix'     => 'fms_',
+        'pConnect'     => false,
+        'DBDebug'      => false,
+        'charset'      => 'utf8mb4',
+        'DBCollat'     => 'utf8mb4_general_ci',
+        'swapPre'      => '',
+        'encrypt'      => false,
+        'compress'     => false,
+        'strictOn'     => false,
+        'failover'     => [],
+        'port'         => 3306,
+        'numberNative' => false,
+        'foundRows'    => false,
+        'dateFormat'   => [
+            'date'     => 'Y-m-d',
+            'datetime' => 'Y-m-d H:i:s',
+            'time'     => 'H:i:s',
+        ],
+    ];
+
+    /**
+     * Koneksi staging (override via env database.staging.*).
+     */
+    public array $staging = [
+        'DSN'          => '',
+        'hostname'     => 'localhost',
+        'username'     => '',
+        'password'     => '',
+        'database'     => '',
+        'DBDriver'     => 'MySQLi',
+        'DBPrefix'     => 'fms_',
+        'pConnect'     => false,
+        'DBDebug'      => true,
+        'charset'      => 'utf8mb4',
+        'DBCollat'     => 'utf8mb4_general_ci',
+        'swapPre'      => '',
+        'encrypt'      => false,
+        'compress'     => false,
+        'strictOn'     => false,
+        'failover'     => [],
+        'port'         => 3306,
+        'numberNative' => false,
+        'foundRows'    => false,
+        'dateFormat'   => [
+            'date'     => 'Y-m-d',
+            'datetime' => 'Y-m-d H:i:s',
+            'time'     => 'H:i:s',
+        ],
+    ];
+
+    /**
      * This database connection is used when running PHPUnit database tests.
      *
      * @var array<string, mixed>
@@ -198,6 +258,42 @@ class Database extends Config
         // we don't overwrite live data on accident.
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
+
+            return;
         }
+
+        // Pilih grup koneksi dari domain (bunuh 3 env: local/staging/production).
+        $this->defaultGroup = $this->detectDatabaseGroup();
+    }
+
+    /**
+     * Tentukan grup database dari hostname request.
+     * Override manual via env: database.group = default|staging|production
+     */
+    private function detectDatabaseGroup(): string
+    {
+        $manual = strtolower((string) (getenv('database.group') ?: ''));
+        if (in_array($manual, ['default', 'staging', 'production'], true)) {
+            return $manual;
+        }
+
+        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+        $host = explode(':', $host)[0];
+
+        foreach (explode(',', (string) (getenv('database.productionHosts') ?: '')) as $pattern) {
+            $pattern = strtolower(trim($pattern));
+            if ($pattern !== '' && fnmatch($pattern, $host)) {
+                return 'production';
+            }
+        }
+
+        foreach (explode(',', (string) (getenv('database.stagingHosts') ?: '')) as $pattern) {
+            $pattern = strtolower(trim($pattern));
+            if ($pattern !== '' && fnmatch($pattern, $host)) {
+                return 'staging';
+            }
+        }
+
+        return 'default';
     }
 }

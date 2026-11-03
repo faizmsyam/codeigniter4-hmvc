@@ -63,6 +63,12 @@ $apiBaseUrl = site_url('api/v1/settings');
               <span class="badge bg-info-transparent rounded-pill fs-11 ms-1" id="badgeTotalBasicClients">0</span>
             </button>
           </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" id="tab-ops-btn" data-bs-toggle="tab" data-bs-target="#tab-ops" type="button" role="tab" aria-controls="tab-ops" aria-selected="false">
+              <i class="ph-duotone ph-terminal-window fs-16"></i>
+              <span>Ops Console</span>
+            </button>
+          </li>
         </ul>
       </div>
 
@@ -545,6 +551,56 @@ $apiBaseUrl = site_url('api/v1/settings');
             </div>
           </div>
 
+          <!-- ════════ TAB: OPS CONSOLE (tanpa terminal) ════════ -->
+          <div class="tab-pane fade" id="tab-ops" role="tabpanel" aria-labelledby="tab-ops-btn">
+            <div class="alert alert-warning d-flex gap-2 mb-3">
+              <i class="ri-alert-line fs-18"></i>
+              <div class="small">Hanya Super Administrator. Generate key menimpa file di <code>writable/keys/</code> hanya jika dicentang <b>force</b>. Setiap aksi tercatat di audit log.</div>
+            </div>
+            <div class="card border shadow-none mb-3">
+              <div class="card-header bg-light-subtle d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-semibold"><i class="ri-terminal-line me-1"></i> Console</h6>
+                <button type="button" class="btn btn-light btn-sm" id="btnOpsClear"><i class="ri-delete-bin-line me-1"></i>Bersihkan</button>
+              </div>
+              <div class="card-body p-0">
+                <pre id="opsConsole" class="mb-0 p-3 font-monospace" style="background:#0d1117;color:#c9d1d9;font-size:12px;line-height:1.6;max-height:320px;overflow-y:auto;border-radius:0 0 6px 6px;"><span class="text-muted">fms-ops $ siap. pilih aksi di bawah.</span>
+</pre>
+              </div>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <div class="card border shadow-none mb-0">
+                  <div class="card-header bg-light-subtle"><h6 class="mb-0 fw-semibold"><i class="ri-key-2-line me-1"></i> Signing &amp; Encryption Keys</h6></div>
+                  <div class="card-body">
+                    <div id="opsKeyStatus" class="small text-muted mb-3">Memuat status...</div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                      <select id="opsKeyScope" class="form-select" style="max-width:220px">
+                        <option value="response">response (fms-response-*)</option>
+                        <option value="jwt">jwt (fms-jwt-active.*)</option>
+                        <option value="encryption">encryption (RSA)</option>
+                      </select>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="opsKeyForce">
+                        <label class="form-check-label small" for="opsKeyForce">force (timpa)</label>
+                      </div>
+                      <button type="button" class="btn btn-primary btn-sm" id="btnOpsGenKeys"><i class="ri-key-line me-1"></i>Generate</button>
+                      <button type="button" class="btn btn-light btn-sm" id="btnOpsKeyStatus"><i class="ri-refresh-line me-1"></i>Status</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border shadow-none mb-0">
+                  <div class="card-header bg-light-subtle"><h6 class="mb-0 fw-semibold"><i class="ri-database-2-line me-1"></i> Database Migrate</h6></div>
+                  <div class="card-body">
+                    <p class="small text-muted">Setara <code>spark migrate --all</code>. Aman diulang (idempoten).</p>
+                    <button type="button" class="btn btn-success btn-sm" id="btnOpsMigrate"><i class="ri-play-line me-1"></i>Jalankan Migrate</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div><!-- /.tab-content -->
       </div><!-- /.card-body -->
     </div><!-- /.card -->
@@ -883,6 +939,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const EMAIL_URL    = API_BASE + "/email";
   const APIKEYS_URL  = API_BASE + "/api-keys";
   const BASIC_URL    = API_BASE + "/basic-auth";
+  const OPSKEYS_URL  = API_BASE + "/ops/keys";
+  const OPSMIGRATE_URL = API_BASE + "/ops/migrate";
   const ORIGIN       = window.location.origin;
 
   const state = {
@@ -1910,6 +1968,113 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("tab-basic-auth-btn").addEventListener("shown.bs.tab", function () {
     loadBasicClients();
   });
+
+  document.getElementById("tab-ops-btn").addEventListener("shown.bs.tab", function () {
+    loadOpsKeyStatus();
+  });
+
+  /* ── Ops Console: keys + migrate (tanpa terminal) ── */
+  function opsLog(html, cls) {
+    var con = document.getElementById("opsConsole");
+    if (!con) return;
+    var line = document.createElement("div");
+    var time = new Date().toLocaleTimeString("id-ID", { hour12: false });
+    line.innerHTML = '<span style="color:#8b949e">[' + esc(time) + ']</span> <span style="color:#58a6ff">fms-ops $</span> <span class="' + (cls || "") + '">' + html + "</span>";
+    con.appendChild(line);
+    con.scrollTop = con.scrollHeight;
+  }
+
+  function opsLogOk(msg) { opsLog(esc(msg), ""); }
+  function opsLogErr(msg) {
+    var con = document.getElementById("opsConsole");
+    if (!con) return;
+    var line = document.createElement("div");
+    line.innerHTML = '<span style="color:#f85149">' + esc(msg) + "</span>";
+    con.appendChild(line);
+    con.scrollTop = con.scrollHeight;
+  }
+
+  var btnOpsClear = document.getElementById("btnOpsClear");
+  if (btnOpsClear) btnOpsClear.addEventListener("click", function () {
+    var con = document.getElementById("opsConsole");
+    if (con) con.innerHTML = '<span class="text-muted">fms-ops $ console dibersihkan.</span>';
+  });
+
+  function fmtTime(ts) {
+    if (!ts) return "-";
+    try { return new Date(ts * 1000).toLocaleString("id-ID"); } catch (e) { return "-"; }
+  }
+
+  function loadOpsKeyStatus() {
+    var box = document.getElementById("opsKeyStatus");
+    if (box) box.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memuat status...';
+    opsLog("spark settings:ops keys:status");
+    FMS.get(OPSKEYS_URL).then(function (body) {
+      var keys = (body && body.data && body.data.keys) || {};
+      var rows = Object.keys(keys).map(function (k) {
+        var v = keys[k] || {};
+        var badge = v.exists ? '<span class="badge bg-success-transparent">ADA</span>' : '<span class="badge bg-danger-transparent">BELUM</span>';
+        return "<div class='d-flex justify-content-between border-bottom py-1'><span><code>" + esc(k) + "</code> " + badge + "</span><span class='text-muted'>" + esc(fmtTime(v.mtime)) + "</span></div>";
+      });
+      if (box) box.innerHTML = rows.length ? rows.join("") : "Belum ada data.";
+      opsLogOk("status ok — " + Object.keys(keys).length + " key diperiksa.");
+    }).catch(function (err) {
+      var msg = "Gagal memuat status: " + (err && err.message ? err.message : err);
+      if (box) box.innerHTML = esc(msg) + ' <button type="button" class="btn btn-light btn-sm ms-2" onclick="loadOpsKeyStatus()">'
+        + '<i class="ri-refresh-line me-1"></i>Coba Lagi</button>';
+      opsLogErr(msg);
+    });
+  }
+  window.loadOpsKeyStatus = loadOpsKeyStatus;
+
+  var btnOpsStatus = document.getElementById("btnOpsKeyStatus");
+  if (btnOpsStatus) btnOpsStatus.addEventListener("click", loadOpsKeyStatus);
+
+  var btnOpsGen = document.getElementById("btnOpsGenKeys");
+  if (btnOpsGen) btnOpsGen.addEventListener("click", function () {
+    var scope = document.getElementById("opsKeyScope").value;
+    var force = document.getElementById("opsKeyForce").checked;
+    FMS.confirm({
+      title: "Generate " + scope + " Keys",
+      message: "Generate keys scope '" + scope + "'" + (force ? " dan TIMPA file lama?" : "?"),
+      description: "File ditulis ke writable/keys/. Tanpa force, file yang sudah ada dilewati.",
+      confirmLabel: "Ya, Generate",
+      loadingLabel: "Memproses...",
+      variant: "warning",
+      action: function () {
+        btnOpsGen.disabled = true;
+        opsLog("spark fms:keys:generate --scope=" + scope + (force ? " --force" : "") + (scope === "encryption" ? "  (alias fms:encryption:generate)" : ""));
+        return FMS.post(OPSKEYS_URL, { scope: scope, force: force }).then(function (body) {
+          var d = (body && body.data) || {};
+          var w = (d.wrote || []).join(", ") || "-";
+          var s = (d.skipped || []).join(", ") || "-";
+          opsLogOk("OK scope " + (d.scope || scope) + " — ditulis: " + w + " | dilewati: " + s);
+          FMS.toast(body.message || "Keys berhasil diproses.", true);
+          loadOpsKeyStatus();
+        }).catch(function (err) {
+          var msg = "Gagal: " + (err && err.message ? err.message : err);
+          opsLogErr(msg);
+          FMS.toast(msg, false);
+        }).finally(function () { btnOpsGen.disabled = false; });
+      }
+    });
+  });
+
+  var btnOpsMig = document.getElementById("btnOpsMigrate");
+  if (btnOpsMig) btnOpsMig.addEventListener("click", function () {
+    FMS.confirm({
+      title: "Jalankan Migrate",
+      message: "Jalankan migrate database sekarang?",
+      description: "Setara spark migrate --all. Aman diulang (idempoten).",
+      confirmLabel: "Ya, Jalankan",
+      loadingLabel: "Migrasi...",
+      variant: "success",
+      action: function () {
+        btnOpsMig.disabled = true;
+        opsLog("spark migrate --all");
+        return FMS.post(OPSMIGRATE_URL, {}).then(function (body) {
+          var d = (body && body.data) || {};
+
 
   /* ── 15. Inisialisasi Pertama Kali ── */
   loadOverview();

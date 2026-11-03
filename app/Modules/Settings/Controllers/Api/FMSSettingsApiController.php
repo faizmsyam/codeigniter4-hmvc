@@ -14,6 +14,7 @@ use App\Libraries\FMSAuditLogger;
 use App\Modules\Settings\Services\FMSApiKeyManagementService;
 use App\Modules\Settings\Services\FMSBasicAuthManagementService;
 use App\Modules\Settings\Services\FMSEmailService;
+use App\Modules\Settings\Services\FMSOpsConsoleService;
 use App\Modules\Settings\Services\FMSSettingsService;
 use CodeIgniter\HTTP\ResponseInterface;
 use InvalidArgumentException;
@@ -25,18 +26,21 @@ final class FMSSettingsApiController extends FMSApiController
     private FMSApiKeyManagementService $apiKeyService;
     private FMSBasicAuthManagementService $basicAuthService;
     private FMSEmailService $emailService;
+    private FMSOpsConsoleService $opsService;
 
     public function __construct(
         ?FMSSettingsService $settingsService = null,
         ?FMSApiKeyManagementService $apiKeyService = null,
         ?FMSBasicAuthManagementService $basicAuthService = null,
         ?FMSEmailService $emailService = null,
+        ?FMSOpsConsoleService $opsService = null,
     ) {
         parent::__construct();
         $this->settingsService  = $settingsService ?? new FMSSettingsService();
         $this->apiKeyService    = $apiKeyService ?? new FMSApiKeyManagementService();
         $this->basicAuthService = $basicAuthService ?? new FMSBasicAuthManagementService();
         $this->emailService     = $emailService ?? new FMSEmailService();
+        $this->opsService       = $opsService ?? new FMSOpsConsoleService();
     }
 
     /* ── Akses Kontrol Super Administrator ────────────────────────── */
@@ -711,6 +715,87 @@ final class FMSSettingsApiController extends FMSApiController
             return $this->respondNotFound($e->getMessage());
         } catch (Throwable $e) {
             return $this->respondServerError('Gagal menghapus Basic Auth: ' . $e->getMessage());
+        }
+    }
+
+    /* ── Ops Console: keys + migrate (tanpa terminal) ─────────────── */
+
+    private function auditOps(string $event, string $detail, int $actorId, int $status = 200): void
+    {
+        try {
+            FMSAuditLogger::record(
+                event: $event,
+                module: 'settings',
+                actorId: $actorId > 0 ? $actorId : null,
+                entityType: 'ops_console',
+                entityId: $event,
+                description: $detail,
+                httpMethod: $this->request->getMethod(),
+                statusCode: $status,
+            );
+        } catch (Throwable) {
+        }
+    }
+
+    public function opsKeyStatus(): ResponseInterface
+    {
+        if ($guard = $this->guardSuperAdministrator()) {
+            return $guard;
+        }
+
+        return $this->respondOk('Status key berhasil dimuat.', ['keys' => $this->opsService->keyStatus()]);
+    }
+
+    public function opsGenerateKeys(): ResponseInterface
+    {
+        if ($guard = $this->guardSuperAdministrator()) {
+            return $guard;
+        }
+
+        $payload = $this->parsePayload();
+        $scope = strtolower((string) ($payload['scope'] ?? 'response'));
+        $force = filter_var($payload['force'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $actorId = $this->currentActorId();
+
+        try {
+            $result = match ($scope) {
+                'response' => $this->opsService->generateResponseKeys($force),
+                'jwt' => $this->opsService->generateJwtKeys($force),
+                'encryption' => $this->opsService->generateEncryptionKeys($force),
+                default => null,
+            };
+
+            if ($result === null) {
+                return $this->respondValidationError(['scope' => 'Scope harus response, jwt, atau encryption.']);
+            }
+
+            $this->auditOps('ops.keys.' . $scope, 'Generate keys scope=' . $scope . ' force=' . ($force ? '1' : '0'), $actorId);
+
+            return $this->respondOk('Keys scope ' . $scope . ' berhasil diproses.', array_merge(['scope' => $scope], $result));
+        } catch (Throwable $e) {
+            $this->auditOps('ops.keys.' . $scope, 'Gagal generate keys: ' . $e->getMessage(), $actorId, 500);
+
+            return $this->respondServerError('Gagal generate keys: ' . $e->getMessage());
+        }
+    }
+
+    public function opsMigrate(): ResponseInterface
+    {
+        if ($guard = $this->guardSuperAdministrator()) {
+            return $guard;
+        }
+
+        $actorId = $this->currentActorId();
+
+        try {
+            $result = $this->opsService->runMigrateAll();
+            $this->auditOps('ops.migrate', 'Migrate dijalankan dari panel: ' . ($result['output'] ?? ''), $actorId);
+
+            return $this->respondOk('Migrate selesai.', $result);
+        } catch (Throwable $e) {
+            $this->auditOps('ops.migrate', 'Gagal migrate: ' . $e->getMessage(), $actorId, 500);
+
+            return $this->respondServerError('Gagal migrate: ' . $e->getMessage());
         }
     }
 }

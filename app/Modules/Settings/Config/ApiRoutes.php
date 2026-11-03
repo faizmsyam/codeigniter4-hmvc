@@ -52,4 +52,9 @@ $routes->group('settings', ['filter' => $settingsApiFilter], static function (Ro
     $routes->post('basic-auth/(:segment)/revoke', [FMSSettingsApiController::class, 'revokeBasicAuthClient'], ['as' => 'fms.api.v1.settings.basic-auth.revoke']);
     $routes->post('basic-auth/(:segment)/activate', [FMSSettingsApiController::class, 'activateBasicAuthClient'], ['as' => 'fms.api.v1.settings.basic-auth.activate']);
     $routes->delete('basic-auth/(:segment)', [FMSSettingsApiController::class, 'deleteBasicAuthClient'], ['as' => 'fms.api.v1.settings.basic-auth.delete']);
+
+    // Ops Console: keys + migrate (tanpa akses terminal, khusus Super)
+    $routes->get('ops/keys', [FMSSettingsApiController::class, 'opsKeyStatus'], ['as' => 'fms.api.v1.settings.ops.keys.status']);
+    $routes->post('ops/keys', [FMSSettingsApiController::class, 'opsGenerateKeys'], ['as' => 'fms.api.v1.settings.ops.keys.generate']);
+    $routes->post('ops/migrate', [FMSSettingsApiController::class, 'opsMigrate'], ['as' => 'fms.api.v1.settings.ops.migrate']);
 });

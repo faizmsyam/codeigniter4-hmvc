@@ -48,6 +48,28 @@ CI_ENVIRONMENT = development
 # database.tests.DBCollat = utf8mb4_general_ci
 # database.tests.port = 3306
 
+# DATABASE PER-ENVIRONMENT (detect dari domain, override manual via database.group)
+# --------------------------------------------------------------------
+# database.group = default
+# database.stagingHosts = staging.*
+# database.productionHosts = bphtb.*
+
+# database.staging.hostname = localhost
+# database.staging.database = ci4_staging
+# database.staging.username = root
+# database.staging.password = [REDACTED]
+# database.staging.DBDriver = MySQLi
+# database.staging.DBPrefix = fms_
+# database.staging.port = 3306
+
+# database.production.hostname = localhost
+# database.production.database = ci4
+# database.production.username = root
+# database.production.password = [REDACTED]
+# database.production.DBDriver = MySQLi
+# database.production.DBPrefix = fms_
+# database.production.port = 3306
+
 #--------------------------------------------------------------------
 # ID OBFUSCATION
 #--------------------------------------------------------------------
