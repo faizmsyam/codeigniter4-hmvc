@@ -9,6 +9,17 @@ if (!function_exists('minifier')) {
 		//   - The minifier never needs to collapse whitespace around </script>.
 		$code = str_replace('<\/script>', "\x00SCRIPT_ESC\x00", $code);
 
+		// Split out <script> blocks: minify HTML only, leave JS byte-identical.
+		$scripts = [];
+		$code = preg_replace_callback(
+			'/<script\b[^>]*>.*?<\/script>/is',
+			function ($m) use (&$scripts) {
+				$scripts[] = $m[0];
+				return "\x00SCRIPT_BLOCK_" . (count($scripts) - 1) . "\x00";
+			},
+			$code
+		);
+
 		$search = array(
 			// Remove whitespaces after tags
 			'/\>[^\S ]+/s',
@@ -27,6 +38,11 @@ if (!function_exists('minifier')) {
 
 		// Restore escaped script closes
 		$code = str_replace("\x00SCRIPT_ESC\x00", '<\/script>', $code);
+
+		// Restore <script> blocks untouched
+		foreach ($scripts as $i => $block) {
+			$code = str_replace("\x00SCRIPT_BLOCK_" . $i . "\x00", $block, $code);
+		}
 
 		return $code;
 	}
