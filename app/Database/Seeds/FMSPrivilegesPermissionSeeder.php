@@ -45,6 +45,8 @@ final class FMSPrivilegesPermissionSeeder extends Seeder
             'read_groups',
             'read_sessions',
             'reset_password',
+            'require_totp',
+            'reset_totp',
             'revoke_sessions',
             'unlock',
             'unverify_email',

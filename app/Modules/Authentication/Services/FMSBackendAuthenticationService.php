@@ -73,6 +73,35 @@ final class FMSBackendAuthenticationService
 
         $userRecord = $loginResult['user'];
 
+        /* ── TOTP gate: enforced global ATAU user diwajibkan per-user ── */
+        $totpStatus = $this->totpStatus((int) $userRecord['id'], $authenticationPolicy);
+        if ($totpStatus['required']) {
+            FMSAuditLogger::record(
+                event: 'auth.login.totp_required',
+                module: 'auth',
+                actorId: (int) $userRecord['id'],
+                entityType: 'user',
+                entityId: (string) $userRecord['id'],
+                description: 'Login password OK, lanjut ke verifikasi 2FA.',
+                after: ['ip_hash' => hash('sha256', $clientIpAddress)],
+                httpMethod: 'POST',
+                statusCode: 202,
+            );
+
+            return [
+                'authenticated' => false,
+                'status_code' => 202,
+                'message' => $totpStatus['has_secret'] ? 'Verifikasi kode 2FA.' : 'Enroll 2FA terlebih dahulu.',
+                'session' => [],
+                'tokens' => [],
+                'totp' => [
+                    'required' => true,
+                    'enroll' => ! $totpStatus['has_secret'],
+                    'pending_user_id' => (int) $userRecord['id'],
+                ],
+            ];
+        }
+
         /* Ambil group pertama yang dimiliki user untuk dijadikan active group saat login */
         $firstGroupId = 0;
         try {
@@ -202,7 +231,7 @@ final class FMSBackendAuthenticationService
         ];
     }
 
-    /** @return array{admin_created_email_verification_required: bool, public_email_verification_required: bool, admin_must_change_password: bool, login_rate_limit_enabled: bool, login_max_failures: int, login_failure_window_seconds: int, login_lockout_seconds: int} */
+    /** @return array{admin_created_email_verification_required: bool, public_email_verification_required: bool, admin_must_change_password: bool, login_rate_limit_enabled: bool, login_max_failures: int, login_failure_window_seconds: int, login_lockout_seconds: int, totp_enforced: bool} */
     private function authenticationPolicy(): array
     {
         $settings = db_connect()->table('c_auth_settings')->orderBy('id', 'DESC')->get(1)->getRowArray() ?? [];
@@ -215,6 +244,115 @@ final class FMSBackendAuthenticationService
             'login_max_failures' => (int) ($settings['login_max_failures'] ?? 5),
             'login_failure_window_seconds' => (int) ($settings['login_failure_window_seconds'] ?? 900),
             'login_lockout_seconds' => (int) ($settings['login_lockout_seconds'] ?? 900),
+            'totp_enforced' => (bool) ($settings['totp_enforced'] ?? false),
+        ];
+    }
+
+    /** @return array{required: bool, has_secret: bool} */
+    private function totpStatus(int $userId, array $authenticationPolicy): array
+    {
+        if (! empty($authenticationPolicy['totp_enforced'])) {
+            try {
+                $row = db_connect()->table('m_users')->select('totp_secret')->where('id', $userId)->get(1)->getRowArray();
+                $hasSecret = is_array($row) && trim((string) ($row['totp_secret'] ?? '')) !== '';
+            } catch (\Throwable) {
+                $hasSecret = false;
+            }
+
+            return ['required' => true, 'has_secret' => $hasSecret];
+        }
+
+        try {
+            $row = db_connect()->table('m_users')
+                ->select('totp_secret, totp_enabled_at')
+                ->where('id', $userId)->get(1)->getRowArray();
+        } catch (\Throwable) {
+            return ['required' => false, 'has_secret' => false];
+        }
+
+        if (! is_array($row) || empty($row['totp_enabled_at'])) {
+            return ['required' => false, 'has_secret' => false];
+        }
+
+        return ['required' => true, 'has_secret' => trim((string) ($row['totp_secret'] ?? '')) !== ''];
+    }
+
+    /**
+     * Dipakai controller TOTP setelah kode 6 digit cocok: terbitkan session+token
+     * penuh persis seperti login password (tanpa cek password ulang).
+     *
+     * @return array{authenticated: bool, status_code: int, message: string, session: array<string, mixed>, tokens: array<string, mixed>, user: array<string, mixed>}
+     */
+    public function issueFullSessionForTotpUser(int $userId, string $clientIpAddress, string $userAgent, string $deviceLabel = ''): array
+    {
+        $currentTimestamp = date('Y-m-d H:i:s');
+        $userRecord = db_connect()->table('m_users')->where('id', $userId)->get(1)->getRowArray();
+        if (! is_array($userRecord)) {
+            return ['authenticated' => false, 'status_code' => 401, 'message' => 'Akun tidak ditemukan.', 'session' => [], 'tokens' => [], 'user' => []];
+        }
+
+        /* Ambil group pertama yang dimiliki user untuk dijadikan active group saat login */
+        $firstGroupId = 0;
+        try {
+            $firstGroupRow = db_connect()
+                ->table('t_user_groups')
+                ->select('group_id')
+                ->where('user_id', $userId)
+                ->orderBy('id', 'ASC')
+                ->get(1)
+                ->getRowArray();
+            if (is_array($firstGroupRow) && isset($firstGroupRow['group_id'])) {
+                $firstGroupId = (int) $firstGroupRow['group_id'];
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Auth: load first group failed: {msg}', ['msg' => $e->getMessage()]);
+        }
+
+        /* Hak akses dihitung hanya dari kelompok aktif agar ganti role konsisten */
+        $permissionCodes = [];
+        if ($firstGroupId > 0) {
+            $permissionCodes = (new \App\Modules\Privileges\Services\FMSPrivilegesEffectivePermissionService(
+                new \App\Modules\Privileges\Repositories\FMSDatabasePrivilegesPermissionRepository(),
+            ))->resolveEffectivePermissionCodesForGroup($firstGroupId);
+        } else {
+            $permissionCodes = $this->effectivePermissionCodes($userId);
+        }
+
+        db_connect()->table('m_users')->where('id', $userId)->update([
+            'failed_login_count' => 0,
+            'locked_until'       => null,
+            'last_login_at'      => $currentTimestamp,
+            'last_login_ip_hash' => hash('sha256', $clientIpAddress),
+        ]);
+
+        return [
+            'authenticated' => true,
+            'status_code' => 200,
+            'message' => 'Login berhasil.',
+            'session' => [
+                'fms_backend_authenticated' => true,
+                'fms_backend_user_id' => $userId,
+                'fms_backend_user_uuid' => (string) $userRecord['uuid'],
+                'fms_backend_username' => (string) $userRecord['username'],
+                'fms_backend_email' => (string) $userRecord['email'],
+                'fms_backend_full_name' => (string) ($userRecord['full_name'] ?: $userRecord['username']),
+                'fms_backend_avatar' => (string) ($userRecord['avatar'] ?? ''),
+                'fms_backend_active_group_id' => $firstGroupId,
+                'fms_backend_permissions' => $permissionCodes,
+                'fms_backend_logged_in_at' => time(),
+                'fms_backend_ip_hash' => hash('sha256', $clientIpAddress),
+                'fms_backend_user_agent_hash' => hash('sha256', $userAgent),
+            ],
+            'tokens' => $this->issueAuthenticationTokensForSubject($userId, (string) $userRecord['uuid'], (int) ($userRecord['token_version'] ?? 1), $permissionCodes, $clientIpAddress, $userAgent, $deviceLabel, $currentTimestamp),
+            'user' => [
+                'id' => $userId,
+                'uuid' => (string) $userRecord['uuid'],
+                'username' => (string) $userRecord['username'],
+                'email' => (string) $userRecord['email'],
+                'status' => (string) ($userRecord['status'] ?? 'active'),
+                'registration_source' => (string) ($userRecord['registration_source'] ?? 'admin'),
+                'must_change_password' => ! empty($userRecord['must_change_password']),
+            ],
         ];
     }
 }

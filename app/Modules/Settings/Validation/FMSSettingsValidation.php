@@ -59,6 +59,21 @@ final class FMSSettingsValidation
             $adminMustChangePassword = $adminMustChangePassword ? 1 : 0;
         }
 
+        $totpEnforced = filter_var($payload['totp_enforced'] ?? 0, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($totpEnforced === null) {
+            $totpEnforced = ! empty($payload['totp_enforced']) ? 1 : 0;
+        } else {
+            $totpEnforced = $totpEnforced ? 1 : 0;
+        }
+
+        $totpIssuer = trim((string) ($payload['totp_issuer'] ?? 'FMS'));
+        if ($totpIssuer === '') {
+            $totpIssuer = 'FMS';
+        }
+        if (mb_strlen($totpIssuer, 'UTF-8') > 64) {
+            $errors['totp_issuer'] = 'Nama issuer 2FA maksimal 64 karakter.';
+        }
+
         $loginRateLimitEnabled = filter_var($payload['login_rate_limit_enabled'] ?? 1, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         if ($loginRateLimitEnabled === null) {
             $loginRateLimitEnabled = ! empty($payload['login_rate_limit_enabled']) ? 1 : 0;
@@ -100,6 +115,8 @@ final class FMSSettingsValidation
             'public_email_verification_required'        => $publicEmailVerification,
             'admin_created_email_verification_required' => $adminEmailVerification,
             'admin_must_change_password'                => $adminMustChangePassword,
+            'totp_enforced'                             => $totpEnforced,
+            'totp_issuer'                               => $totpIssuer,
             'login_rate_limit_enabled'                  => $loginRateLimitEnabled,
             'login_max_failures'                        => $loginMaxFailures,
             'login_failure_window_seconds'              => $loginFailureWindow,

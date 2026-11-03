@@ -143,7 +143,7 @@
               </div>
             <?php endif; ?>
 
-            <form id="signin-form" autocomplete="on" novalidate>
+            <form id="signin-form" method="post" action="javascript:void(0)" autocomplete="on" novalidate>
               <?php echo csrf_field() ?>
               <div class="row gy-3">
                 <div class="col-xl-12">
@@ -179,6 +179,30 @@
               </div>
               <div class="d-grid mt-3">
                 <button type="submit" class="btn btn-primary" id="signin-submit">Masuk</button>
+              </div>
+            </form>
+
+            <!-- Panel 2FA: muncul saat login jawab HTTP 202 -->
+            <form id="totp-form" class="d-none" autocomplete="off" novalidate>
+              <div id="totp-enroll-box" class="d-none text-center">
+                <p class="mb-2 text-muted fw-normal">Pindai QR ini dengan Google Authenticator, lalu masukkan 6 digit kode.</p>
+                <img id="totp-qr" alt="QR 2FA" class="img-fluid border rounded p-2 mb-3" style="max-width:220px">
+              </div>
+              <div id="totp-challenge-box" class="d-none">
+                <p class="mb-2 text-muted fw-normal">Masukkan 6 digit kode dari aplikasi Authenticator Anda.</p>
+              </div>
+              <div class="col-xl-12 mb-2">
+                <label for="totp-code" class="form-label text-default d-block">Kode 2FA</label>
+                <input type="text" class="form-control text-center fs-4 tracking-widest" id="totp-code"
+                  placeholder="000000" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required>
+                <small class="text-muted">Bisa juga pakai salah satu backup code (8 karakter).</small>
+              </div>
+              <div id="totp-backup-box" class="alert alert-warning d-none" role="alert" aria-live="polite"></div>
+              <div class="d-grid mt-3">
+                <button type="submit" class="btn btn-primary" id="totp-submit">Verifikasi</button>
+              </div>
+              <div class="d-grid mt-2">
+                <button type="button" class="btn btn-light" id="totp-back">Kembali</button>
               </div>
             </form>
           </div>
@@ -219,6 +243,11 @@
 
     var loginUrl = <?php echo json_encode(site_url('api/v1/auth/login')) ?>;
     var dashboardUrl = <?php echo json_encode(site_url(ROUTE_ADMIN . '/dashboard')) ?>;
+    var totpStatusUrl = <?php echo json_encode(site_url('api/v1/auth/totp/status')) ?>;
+    var totpEnrollBeginUrl = <?php echo json_encode(site_url('api/v1/auth/totp/enroll-begin')) ?>;
+    var totpEnrollConfirmUrl = <?php echo json_encode(site_url('api/v1/auth/totp/enroll-confirm')) ?>;
+    var totpChallengeUrl = <?php echo json_encode(site_url('api/v1/auth/totp/challenge')) ?>;
+    var totpMode = null; /* 'enroll' | 'challenge' */
 
     function showAlert(message, level) {
       var variant = level === 'success' ? 'alert-success' : 'alert-danger';
@@ -226,10 +255,94 @@
       alertBox.textContent = message;
     }
 
+    function finishLogin(payload) {
+      var accessToken = payload && payload.access_token ? String(payload.access_token) : '';
+      var tokenType = payload && payload.token_type ? String(payload.token_type) : 'Bearer';
+      var redirectUrl = payload && payload.redirect_url ? String(payload.redirect_url) : dashboardUrl;
+      var backupCodes = payload && payload.backup_codes ? payload.backup_codes : null;
+
+      try {
+        sessionStorage.setItem('fms_access_token', accessToken);
+        sessionStorage.setItem('fms_token_type', tokenType);
+      } catch (storageError) {
+        /* Token tetap tersimpan di httpOnly refresh cookie, lanjut redirect. */
+      }
+
+      if (backupCodes && backupCodes.length) {
+        var backupBox = document.getElementById('totp-backup-box');
+        backupBox.className = 'alert alert-warning';
+        backupBox.innerHTML = 'Simpan backup code ini (tampil SEKALI saja):<br><strong>' + backupCodes.join('<br>') + '</strong>'
+          + '<div class="d-grid mt-2"><button type="button" class="btn btn-sm btn-outline-dark" id="totp-copy-backup" data-codes="' + backupCodes.join(',') + '">Salin Semua</button></div>';
+        showAlert('2FA aktif. Salin backup code sebelum lanjut.', 'success');
+        document.getElementById('totp-copy-backup').addEventListener('click', function() {
+          var text = this.getAttribute('data-codes').split(',').join(String.fromCharCode(10));
+          var btn = this;
+          function done() { btn.textContent = 'Tersalin!'; }
+          if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+          else { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (copyErr) {} document.body.removeChild(ta); done(); }
+        });
+        setTimeout(function() { window.location.href = redirectUrl; }, 15000);
+        return;
+      }
+
+      showAlert('Login berhasil. Mengalihkan...', 'success');
+      window.location.href = redirectUrl;
+    }
+
     function hideAlert() {
       alertBox.className = 'alert d-none';
       alertBox.textContent = '';
     }
+
+    function showTotpPanel(enroll) {
+      totpMode = enroll ? 'enroll' : 'challenge';
+      form.classList.add('d-none');
+      document.getElementById('totp-form').classList.remove('d-none');
+      document.getElementById('totp-enroll-box').classList.toggle('d-none', !enroll);
+      document.getElementById('totp-challenge-box').classList.toggle('d-none', enroll);
+      document.getElementById('totp-backup-box').className = 'alert alert-warning d-none';
+      var codeInput = document.getElementById('totp-code');
+      codeInput.value = '';
+      if (enroll) {
+        FMS.ajax({ url: totpEnrollBeginUrl, method: 'POST', data: {} }).then(function(payload) {
+          if (payload && payload.qr_data_uri) {
+            document.getElementById('totp-qr').src = String(payload.qr_data_uri);
+          }
+          codeInput.focus();
+        }).catch(function(error) {
+          showAlert((error && error.message) || 'Gagal menyiapkan 2FA.', 'danger');
+        });
+      } else {
+        codeInput.focus();
+      }
+    }
+
+    document.getElementById('totp-back').addEventListener('click', function() {
+      document.getElementById('totp-form').classList.add('d-none');
+      form.classList.remove('d-none');
+      totpMode = null;
+      submitButton.disabled = false;
+    });
+
+    document.getElementById('totp-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      hideAlert();
+      var code = (document.getElementById('totp-code').value || '').trim();
+      if (code === '') {
+        showAlert('Kode 2FA wajib diisi.', 'danger');
+        return;
+      }
+      var submitTotp = document.getElementById('totp-submit');
+      submitTotp.disabled = true;
+      var url = totpMode === 'enroll' ? totpEnrollConfirmUrl : totpChallengeUrl;
+      FMS.ajax({ url: url, method: 'POST', data: { code: code } }).then(function(payload) {
+        finishLogin(payload);
+      }).catch(function(error) {
+        var message = (error && error.message) ? String(error.message) : 'Verifikasi gagal. Coba lagi.';
+        showAlert(message, 'danger');
+        submitTotp.disabled = false;
+      });
+    });
 
     form.addEventListener('submit', function(event) {
       event.preventDefault();
@@ -254,19 +367,13 @@
           device_label: navigator.userAgent ? navigator.userAgent.slice(0, 191) : 'web-admin'
         }
       }).then(function(payload) {
-        var accessToken = payload && payload.access_token ? String(payload.access_token) : '';
-        var tokenType = payload && payload.token_type ? String(payload.token_type) : 'Bearer';
-        var redirectUrl = payload && payload.redirect_url ? String(payload.redirect_url) : dashboardUrl;
-
-        try {
-          sessionStorage.setItem('fms_access_token', accessToken);
-          sessionStorage.setItem('fms_token_type', tokenType);
-        } catch (storageError) {
-          /* Token tetap tersimpan di httpOnly refresh cookie, lanjut redirect. */
+        /* TOTP: backend jawab 202 + { totp_required, enroll } */
+        if (payload && payload.totp_required) {
+          hideAlert();
+          showTotpPanel(!!payload.enroll);
+          return;
         }
-
-        showAlert('Login berhasil. Mengalihkan...', 'success');
-        window.location.href = redirectUrl;
+        finishLogin(payload);
       }).catch(function(error) {
         var message = (error && error.message) ? String(error.message) : 'Login gagal. Coba lagi.';
         var status = error && typeof error.status !== 'undefined' ? Number(error.status) : 0;

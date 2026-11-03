@@ -14,12 +14,15 @@ if (!function_exists('minifier')) {
 			'/\>[^\S ]+/s',
 			// Remove whitespaces before tags
 			'/[^\S ]+\</s',
+			// Strip single-line JS comments (they would eat the rest of the
+			// line once newlines are collapsed). Block comments are kept.
+			'~(?<![\'":\/])\/\/[^\r\n]*~',
 			// Remove multiple whitespace sequences
 			'/(\s)+/s',
 			// Removes HTML comments
 			'/<!--(.|\s)*?-->/'
 		);
-		$replace = array('>', '<', '$1', '');
+		$replace = array('>', '<', '', '$1', '');
 		$code = preg_replace($search, $replace, $code);
 
 		// Restore escaped script closes

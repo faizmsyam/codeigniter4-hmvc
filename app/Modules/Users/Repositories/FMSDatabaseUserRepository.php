@@ -327,6 +327,7 @@ final class FMSDatabaseUserRepository implements FMSUserRepositoryInterface
             'id', 'uuid', 'username', 'email', 'full_name', 'phone', 'avatar',
             'status', 'registration_source', 'email_verified_at', 'password_changed_at',
             'failed_login_count', 'locked_until', 'last_login_at', 'must_change_password',
+            'totp_secret', 'totp_enabled_at',
             'token_version', 'session_version', 'created_at', 'updated_at', 'deleted_at',
         ];
     }

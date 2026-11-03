@@ -361,6 +361,11 @@ final class FMSUserService
         return $this->unlock($this->userIdentifierFromUuid($userUuid, true), $actorIdentifier);
     }
 
+    public function userIdentifierFromUuidPublic(string $userUuid): int
+    {
+        return $this->userIdentifierFromUuid($userUuid, true);
+    }
+
     public function changeStatusByUuid(string $userUuid, string $status, int $actorIdentifier): bool
     {
         return $this->changeStatus($this->userIdentifierFromUuid($userUuid, true), $status, $actorIdentifier);

@@ -195,6 +195,22 @@ $apiBaseUrl = site_url('api/v1/settings');
                     <hr class="my-3">
                     <div class="mb-0">
                       <div class="form-check form-switch d-flex align-items-center justify-content-between ps-0">
+                        <label class="form-check-label fw-semibold" for="setTotpEnforced">
+                          Wajib Login 2FA (Google Authenticator)
+                          <div class="text-muted fw-normal fs-12">Jika aktif, semua user wajib verifikasi kode 6 digit setelah password. Berlaku global.</div>
+                        </label>
+                        <input class="form-check-input ms-3 fs-18" type="checkbox" role="switch" id="setTotpEnforced">
+                      </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="mb-0">
+                      <label for="setTotpIssuer" class="form-label fw-semibold">Nama Issuer 2FA</label>
+                      <input type="text" class="form-control" id="setTotpIssuer" maxlength="64" placeholder="FMS">
+                      <div class="form-text fs-12">Nama yang tampil di Google Authenticator saat enroll. Default: FMS.</div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="mb-0">
+                      <div class="form-check form-switch d-flex align-items-center justify-content-between ps-0">
                         <label class="form-check-label fw-semibold" for="setAdminMustChangePassword">
                           Wajib Ganti Password (User Buatan Admin)
                           <div class="text-muted fw-normal fs-12">User yang dibuat oleh Administrator wajib mengganti password default sebelum dapat mengakses sistem.</div>
@@ -1003,6 +1019,8 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("setPublicEmailVerif").checked  = Boolean(Number(s.public_email_verification_required));
       document.getElementById("setAdminEmailVerif").checked   = Boolean(Number(s.admin_created_email_verification_required));
       document.getElementById("setAdminMustChangePassword").checked = Boolean(Number(s.admin_must_change_password));
+      document.getElementById("setTotpEnforced").checked = Boolean(Number(s.totp_enforced));
+      document.getElementById("setTotpIssuer").value = s.totp_issuer || "FMS";
       document.getElementById("setLoginRateLimit").checked = Number(s.login_rate_limit_enabled ?? 1) === 1;
       document.getElementById("setLoginMaxFailures").value = Number(s.login_max_failures) || 5;
       document.getElementById("setLoginFailureWindow").value = Number(s.login_failure_window_seconds) || 900;
@@ -1030,6 +1048,8 @@ document.addEventListener("DOMContentLoaded", function () {
       public_email_verification_required:        document.getElementById("setPublicEmailVerif").checked ? 1 : 0,
       admin_created_email_verification_required:  document.getElementById("setAdminEmailVerif").checked ? 1 : 0,
       admin_must_change_password:                document.getElementById("setAdminMustChangePassword").checked ? 1 : 0,
+      totp_enforced:                             document.getElementById("setTotpEnforced").checked ? 1 : 0,
+      totp_issuer:                               document.getElementById("setTotpIssuer").value.trim() || "FMS",
       login_rate_limit_enabled:                  document.getElementById("setLoginRateLimit").checked ? 1 : 0,
       login_max_failures:                        parseInt(document.getElementById("setLoginMaxFailures").value, 10),
       login_failure_window_seconds:              parseInt(document.getElementById("setLoginFailureWindow").value, 10),

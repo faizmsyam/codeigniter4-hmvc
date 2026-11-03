@@ -48,6 +48,25 @@ final class FMSAuthenticationApiController extends FMSApiController
             );
 
             if ($authenticationResult['authenticated'] !== true) {
+                // Cabang TOTP: password OK, lanjut enroll/challenge (HTTP 202).
+                $totp = $authenticationResult['totp'] ?? null;
+                if (is_array($totp) && ! empty($totp['required'])) {
+                    $backendSession = session();
+                    $backendSession->regenerate(true);
+                    $backendSession->set([
+                        'fms_totp_pending'     => (int) $totp['pending_user_id'],
+                        'fms_totp_pending_exp' => time() + 600,
+                    ]);
+                    $backendSession->remove('fms_totp_attempts');
+                    $backendSession->remove('fms_totp_attempt_exp');
+                    $backendSession->remove('fms_totp_enroll_secret');
+
+                    return $this->respondSuccess(202, $authenticationResult['message'], [
+                        'totp_required' => true,
+                        'enroll'        => (bool) ($totp['enroll'] ?? false),
+                    ], 202);
+                }
+
                 return $this->respondError(400, $authenticationResult['message'], null, $authenticationResult['status_code']);
             }
 
@@ -411,26 +430,38 @@ final class FMSAuthenticationApiController extends FMSApiController
         $csrfToken = bin2hex(random_bytes(32));
         $secureCookie = $cookieConfiguration->refreshCookieSecure && $this->request->isSecure();
 
-        $this->response->setCookie([
-            'name'     => $cookieConfiguration->refreshCookieName,
-            'value'    => $presentedRefreshToken,
-            'expire'   => $cookieConfiguration->refreshCookieEnabled ? $cookieConfiguration->refreshCookieTtlSeconds : 0,
-            'path'     => '/',
-            'secure'   => $secureCookie,
-            'httponly' => $cookieConfiguration->refreshCookieHttpOnly,
-            'samesite' => $cookieConfiguration->refreshCookieSameSite,
-        ]);
-        $this->response->setCookie([
-            'name'     => $cookieConfiguration->csrfCookieName,
-            'value'    => $csrfToken,
-            'expire'   => $cookieConfiguration->refreshCookieTtlSeconds,
-            'path'     => '/',
-            'secure'   => $secureCookie,
-            'httponly' => false,
-            'samesite' => $cookieConfiguration->refreshCookieSameSite,
-        ]);
+        $cookieParams = function (string $name, string $value, int $expire, bool $httpOnly) use ($cookieConfiguration, $secureCookie): array {
+            return [
+                'name'     => $name,
+                'value'    => $value,
+                'expire'   => $expire,
+                'path'     => '/',
+                'secure'   => $secureCookie,
+                'httponly' => $httpOnly,
+                'samesite' => $cookieConfiguration->refreshCookieSameSite,
+            ];
+        };
+
+        $this->response->setCookie($cookieParams(
+            $cookieConfiguration->refreshCookieName,
+            $presentedRefreshToken,
+            $cookieConfiguration->refreshCookieEnabled ? $cookieConfiguration->refreshCookieTtlSeconds : 0,
+            $cookieConfiguration->refreshCookieHttpOnly,
+        ));
+        $this->response->setCookie($cookieParams(
+            $cookieConfiguration->csrfCookieName,
+            $csrfToken,
+            $cookieConfiguration->refreshCookieTtlSeconds,
+            false,
+        ));
 
         return $csrfToken;
+    }
+
+    /** Dipakai FMSTotpApiController: cookie refresh konsisten tanpa duplikasi logika. */
+    public function issueRefreshCookieForTotp(string $presentedRefreshToken): string
+    {
+        return $this->issueRefreshCookie($presentedRefreshToken);
     }
 
     private function clearRefreshCookie(): void

@@ -22,6 +22,8 @@ $routes->group('users', ['filter' => $usersApiFilter], static function (RouteCol
     $routes->post('(:segment)/restore', [FMSUsersApiController::class, 'restore']);
     $routes->post('(:segment)/unlock', [FMSUsersApiController::class, 'unlock']);
     $routes->post('(:segment)/reset-password', [FMSUsersApiController::class, 'resetPassword']);
+    $routes->post('(:segment)/require-totp', [FMSUsersApiController::class, 'requireTotp']);
+    $routes->post('(:segment)/reset-totp', [FMSUsersApiController::class, 'resetTotp']);
     $routes->post('(:segment)/verify-email', [FMSUsersApiController::class, 'verifyEmail']);
     $routes->post('(:segment)/unverify-email', [FMSUsersApiController::class, 'unverifyEmail']);
     $routes->patch('(:segment)/status', [FMSUsersApiController::class, 'changeStatus']);

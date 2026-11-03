@@ -430,6 +430,77 @@ class FMSUsersApiController extends FMSApiController
         return $this->respondSuccess(200, 'Verifikasi email user berhasil dibatalkan.', ['uuid' => $userUuid], 200);
     }
 
+    /**
+     * Wajibkan 2FA untuk user (Super only via permission).
+     * Hanya set flag — user tanpa secret akan enroll saat login berikut.
+     */
+    public function requireTotp(string $userUuid = ''): ResponseInterface
+    {
+        $authenticatedSubject = FMSRequestContext::authenticatedSubject($this->request);
+        if (! is_array($authenticatedSubject)) {
+            return $this->respondError(401, 'Token akses tidak valid.', null, 401);
+        }
+        if (! $this->userAuthorizationService->allows($authenticatedSubject, 'users.require_totp')) {
+            return $this->respondError(403, 'Akses ditolak.', null, 403);
+        }
+
+        try {
+            $userId = $this->userService->userIdentifierFromUuidPublic($userUuid);
+        } catch (InvalidArgumentException) {
+            return $this->respondError(404, 'User tidak ditemukan.', null, 404);
+        }
+
+        db_connect()->table('m_users')->where('id', $userId)->update([
+            'totp_enabled_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->respondSuccess(200, '2FA diwajibkan untuk user.', ['uuid' => $userUuid], 200);
+    }
+
+    /** Reset 2FA user: hapus secret + backup code (Super only via permission). */
+    public function resetTotp(string $userUuid = ''): ResponseInterface
+    {
+        $authenticatedSubject = FMSRequestContext::authenticatedSubject($this->request);
+        if (! is_array($authenticatedSubject)) {
+            return $this->respondError(401, 'Token akses tidak valid.', null, 401);
+        }
+        if (! $this->userAuthorizationService->allows($authenticatedSubject, 'users.reset_totp')) {
+            return $this->respondError(403, 'Akses ditolak.', null, 403);
+        }
+
+        try {
+            $userId = $this->userService->userIdentifierFromUuidPublic($userUuid);
+        } catch (InvalidArgumentException) {
+            return $this->respondError(404, 'User tidak ditemukan.', null, 404);
+        }
+
+        $db = db_connect();
+        $db->transStart();
+        $db->table('m_users')->where('id', $userId)->update([
+            'totp_secret'     => null,
+            'totp_enabled_at' => null,
+        ]);
+        $db->table('t_user_totp_backup_codes')->where('user_id', $userId)->delete();
+        $db->transComplete();
+
+        if (! $db->transStatus()) {
+            return $this->respondError(500, 'Gagal mereset 2FA.', null, 500);
+        }
+
+        try {
+            \App\Libraries\FMSAuditLogger::record(
+                event: 'totp.reset', module: 'users',
+                actorId: $this->actorIdentifierFromSubject($authenticatedSubject),
+                entityType: 'user', entityId: (string) $userId,
+                description: '2FA user direset oleh admin.',
+                httpMethod: $this->request->getMethod(), statusCode: 200,
+            );
+        } catch (\Throwable) {
+        }
+
+        return $this->respondSuccess(200, '2FA user berhasil direset.', ['uuid' => $userUuid], 200);
+    }
+
     public function unlock(string $userUuid = ''): ResponseInterface
     {
         $authenticatedSubject = FMSRequestContext::authenticatedSubject($this->request);
@@ -618,6 +689,7 @@ class FMSUsersApiController extends FMSApiController
                 ? 'deleted'
                 : (string) ($user['status'] ?? 'active'),
             'is_email_verified' => trim((string) ($user['email_verified_at'] ?? '')) !== '',
+            'totp_enabled' => trim((string) ($user['totp_enabled_at'] ?? '')) !== '',
             'locked_until'    => (string) ($user['locked_until'] ?? ''),
             'avatar'          => (string) ($user['avatar'] ?? ''),
             'created_at'      => (string) ($user['created_at'] ?? ''),

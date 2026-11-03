@@ -3,6 +3,7 @@
 use App\Filters\FMSApiAuthenticationFilter;
 use App\Modules\Authentication\Controllers\Api\FMSAuthenticationApiController;
 use App\Modules\Authentication\Controllers\Api\FMSEmailVerificationApiController;
+use App\Modules\Authentication\Controllers\Api\FMSTotpApiController;
 use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
@@ -12,6 +13,12 @@ $routes->post('auth/refresh', [FMSAuthenticationApiController::class, 'refresh']
 /* Verifikasi email — endpoint publik tanpa filter autentikasi */
 $routes->post('auth/email/resend', [FMSEmailVerificationApiController::class, 'resend'], ['as' => 'fms.api.v1.auth.email.resend']);
 $routes->post('auth/email/verify', [FMSEmailVerificationApiController::class, 'verify'], ['as' => 'fms.api.v1.auth.email.verify']);
+
+/* TOTP 2FA — publik (dijaga pending session 10 mnt, tanpa auth penuh) */
+$routes->get('auth/totp/status', [FMSTotpApiController::class, 'status'], ['as' => 'fms.api.v1.auth.totp.status']);
+$routes->post('auth/totp/enroll-begin', [FMSTotpApiController::class, 'enrollBegin'], ['as' => 'fms.api.v1.auth.totp.enroll_begin']);
+$routes->post('auth/totp/enroll-confirm', [FMSTotpApiController::class, 'enrollConfirm'], ['as' => 'fms.api.v1.auth.totp.enroll_confirm']);
+$routes->post('auth/totp/challenge', [FMSTotpApiController::class, 'challenge'], ['as' => 'fms.api.v1.auth.totp.challenge']);
 
 $apiFilterAlias = 'fms-api-authentication';
 $registeredFilters = config(Config\Filters::class)->aliases;

@@ -83,6 +83,8 @@ final class FMSSettingsService
                 'public_email_verification_required'        => (int) ($authSettings['public_email_verification_required'] ?? 1),
                 'admin_created_email_verification_required' => (int) ($authSettings['admin_created_email_verification_required'] ?? 0),
                 'admin_must_change_password'                => (int) ($authSettings['admin_must_change_password'] ?? 0),
+                'totp_enforced'                             => (int) ($authSettings['totp_enforced'] ?? 0),
+                'totp_issuer'                               => (string) ($authSettings['totp_issuer'] ?? 'FMS'),
                 'verification_ttl_minutes'                  => (int) ($authSettings['verification_ttl_minutes'] ?? 1440),
                 'resend_cooldown_seconds'                   => (int) ($authSettings['resend_cooldown_seconds'] ?? 120),
                 'login_rate_limit_enabled'                 => (int) ($authSettings['login_rate_limit_enabled'] ?? 1),

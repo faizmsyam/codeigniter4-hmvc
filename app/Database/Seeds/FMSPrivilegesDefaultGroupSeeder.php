@@ -57,6 +57,8 @@ final class FMSPrivilegesDefaultGroupSeeder extends Seeder
         'users.update',
         'users.change_status',
         'users.reset_password',
+        'users.require_totp',
+        'users.reset_totp',
         'users.verify_email',
         'users.unverify_email',
         'users.unlock',

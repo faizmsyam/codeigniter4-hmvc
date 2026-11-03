@@ -71,6 +71,7 @@ $baseUrl = site_url('api/v1/users');
             <th>Email</th>
             <th style="width:120px" class="text-center">Status</th>
             <th style="width:100px" class="text-center">Verifikasi</th>
+            <th style="width:90px" class="text-center">2FA</th>
             <th style="width:140px">Dibuat</th>
             <th style="width:200px" class="text-end">Aksi</th>
           </tr>
@@ -242,6 +243,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const CAN_UNVERIFY      = <?php echo $can('users.unverify_email') ? 'true' : 'false'; ?>;
   const CAN_READ_SESSIONS = <?php echo $can('users.read_sessions') ? 'true' : 'false'; ?>;
   const CAN_REVOKE_SESS   = <?php echo $can('users.revoke_sessions') ? 'true' : 'false'; ?>;
+  const CAN_REQUIRE_TOTP  = <?php echo $can('users.require_totp')  ? 'true' : 'false'; ?>;
+  const CAN_RESET_TOTP    = <?php echo $can('users.reset_totp')    ? 'true' : 'false'; ?>;
 
   const BASE_URL = <?php echo json_encode($baseUrl, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 
@@ -305,6 +308,12 @@ document.addEventListener('DOMContentLoaded', function() {
     return verified
       ? `<span class="badge bg-success-transparent"><i class="ri-checkbox-circle-line me-1"></i>Ya</span>`
       : `<span class="badge bg-secondary-transparent">Belum</span>`;
+  }
+
+  function totpBadge(u) {
+    return u.totp_enabled
+      ? `<span class="badge bg-primary-transparent"><i class="ri-shield-keyhole-line me-1"></i>Aktif</span>`
+      : `<span class="badge bg-secondary-transparent">Mati</span>`;
   }
 
   function renderSummary(summary) {
@@ -377,6 +386,14 @@ document.addEventListener('DOMContentLoaded', function() {
       actions.push(`<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-user-revoke-sessions" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Keluarkan dari Perangkat"><i class="ri-logout-box-line"></i></button>`);
     }
 
+    if (CAN_RESET_TOTP && u.status !== `deleted` && u.totp_enabled) {
+      actions.push(`<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-user-reset-totp" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Nonaktifkan 2FA (reset)"><i class="ri-shield-cross-line"></i></button>`);
+    }
+
+    if (CAN_REQUIRE_TOTP && u.status !== `deleted` && !u.totp_enabled) {
+      actions.push(`<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-user-require-totp" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Wajibkan 2FA saat login berikutnya"><i class="ri-shield-keyhole-line"></i></button>`);
+    }
+
     const avatarInitial = (u.full_name || u.username || `U`).charAt(0).toUpperCase();
 
     return `
@@ -396,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <td class="text-muted small">${esc(u.email)}</td>
         <td class="text-center">${statusBadge(u.status, u.uuid, u.username)}</td>
         <td class="text-center">${verifiedBadge(u.is_email_verified)}</td>
+        <td class="text-center">${totpBadge(u)}</td>
         <td class="text-muted small">${formatDate(u.created_at)}</td>
         <td class="text-end text-nowrap">${actions.join(` `) || `-`}</td>
       </tr>
@@ -754,6 +772,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSessions = e.target.closest(`.js-user-sessions`);
     if (btnSessions) {
       openSessionsModal(btnSessions.dataset.uuid, btnSessions.dataset.username);
+      return;
+    }
+
+    /* Wajibkan 2FA per-user (Super only) */
+    const btnReqTotp = e.target.closest(`.js-user-require-totp`);
+    if (btnReqTotp) {
+      const uname = btnReqTotp.dataset.username;
+      FMS.confirm({
+        title: `Wajibkan 2FA`,
+        message: `Wajibkan "${uname}" enroll 2FA saat login berikutnya?`,
+        confirmLabel: `Wajibkan`,
+        loadingLabel: `Menyimpan...`,
+        variant: `primary`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${btnReqTotp.dataset.uuid}/require-totp`, {}).then(function() {
+            FMS.toast(`2FA diwajibkan untuk ${uname}.`, true);
+            loadUsers(currentPage);
+          });
+        }
+      });
+      return;
+    }
+
+    /* Reset / nonaktifkan 2FA per-user (Super only) */
+    const btnResetTotp = e.target.closest(`.js-user-reset-totp`);
+    if (btnResetTotp) {
+      const uname = btnResetTotp.dataset.username;
+      FMS.confirm({
+        title: `Nonaktifkan 2FA`,
+        message: `Nonaktifkan 2FA untuk "${uname}"? Secret + backup code dihapus.`,
+        confirmLabel: `Nonaktifkan`,
+        loadingLabel: `Menonaktifkan...`,
+        variant: `danger`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${btnResetTotp.dataset.uuid}/reset-totp`, {}).then(function() {
+            FMS.toast(`2FA ${uname} dinonaktifkan.`, true);
+            loadUsers(currentPage);
+          });
+        }
+      });
       return;
     }
 
