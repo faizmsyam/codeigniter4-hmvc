@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Auth page theme toggle — seragam dengan backend (switcher offcanvas).
  *
@@ -68,16 +69,24 @@
     background-color: rgba(255, 255, 255, 0.1);
   }
 
-  .fms-auth-theme-switcher__btn:first-child { border-radius: 999px 0 0 999px; }
-  .fms-auth-theme-switcher__btn:last-child  { border-radius: 0 999px 999px 0; }
+  .fms-auth-theme-switcher__btn:first-child {
+    border-radius: 999px 0 0 999px;
+  }
 
-  .fms-auth-theme-switcher .ti { font-size: 1rem; line-height: 1; }
+  .fms-auth-theme-switcher__btn:last-child {
+    border-radius: 0 999px 999px 0;
+  }
+
+  .fms-auth-theme-switcher .ti {
+    font-size: 1rem;
+    line-height: 1;
+  }
 </style>
 
 <script>
-  (function () {
+  (function() {
     var lightBtn = document.getElementById('switcher-light-theme');
-    var darkBtn  = document.getElementById('switcher-dark-theme');
+    var darkBtn = document.getElementById('switcher-dark-theme');
     if (!lightBtn || !darkBtn) return;
 
     function isDark() {
@@ -197,7 +206,7 @@
                   placeholder="000000" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required>
                 <small class="text-muted">Bisa juga pakai salah satu backup code (8 karakter).</small>
               </div>
-              <div id="totp-backup-box" class="alert alert-warning d-none" role="alert" aria-live="polite"></div>
+              <div id="totp-backup-box" class="alert alert-success d-none" role="alert" aria-live="polite"></div>
               <div class="d-grid mt-3">
                 <button type="submit" class="btn btn-primary" id="totp-submit">Verifikasi</button>
               </div>
@@ -270,18 +279,63 @@
 
       if (backupCodes && backupCodes.length) {
         var backupBox = document.getElementById('totp-backup-box');
-        backupBox.className = 'alert alert-warning';
-        backupBox.innerHTML = 'Simpan backup code ini (tampil SEKALI saja):<br><strong>' + backupCodes.join('<br>') + '</strong>'
-          + '<div class="d-grid mt-2"><button type="button" class="btn btn-sm btn-outline-dark" id="totp-copy-backup" data-codes="' + backupCodes.join(',') + '">Salin Semua</button></div>';
+        backupBox.className = 'alert alert-success';
+        backupBox.innerHTML = `
+          <div class="text-center mb-3">
+            <strong>Simpan Backup Code Ini</strong>
+            <div class="text-danger small">
+              Kode hanya ditampilkan SEKALI saja!
+            </div>
+          </div>
+
+          <div class="p-3 bg-success text-white rounded text-center">
+            <div class="row g-2 text-center">
+              ${backupCodes.map(code => `
+                <div class="col-6">
+                  <strong>${code}</strong>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="d-grid mt-3">
+            <button type="button"
+              class="btn btn-sm btn-success"
+              id="totp-copy-backup"
+              data-codes="${backupCodes.join(',')}">
+              <i class="bi bi-clipboard"></i> Salin Semua
+            </button>
+          </div>
+        `;
         showAlert('2FA aktif. Salin backup code sebelum lanjut.', 'success');
         document.getElementById('totp-copy-backup').addEventListener('click', function() {
           var text = this.getAttribute('data-codes').split(',').join(String.fromCharCode(10));
           var btn = this;
-          function done() { btn.textContent = 'Tersalin!'; }
-          if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-          else { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (copyErr) {} document.body.removeChild(ta); done(); }
+
+          function done() {
+            btn.textContent = 'Tersalin!';
+            showAlert('Login berhasil. Mengalihkan...', 'success');
+            
+            setTimeout(function() {
+              window.location.href = redirectUrl;
+            }, 300);
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, done);
+          } else {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+              document.execCommand('copy');
+            } catch (copyErr) {}
+            document.body.removeChild(ta);
+            done();
+          }
         });
-        setTimeout(function() { window.location.href = redirectUrl; }, 15000);
+
         return;
       }
 
@@ -300,11 +354,15 @@
       document.getElementById('totp-form').classList.remove('d-none');
       document.getElementById('totp-enroll-box').classList.toggle('d-none', !enroll);
       document.getElementById('totp-challenge-box').classList.toggle('d-none', enroll);
-      document.getElementById('totp-backup-box').className = 'alert alert-warning d-none';
+      document.getElementById('totp-backup-box').className = 'alert alert-success d-none';
       var codeInput = document.getElementById('totp-code');
       codeInput.value = '';
       if (enroll) {
-        FMS.ajax({ url: totpEnrollBeginUrl, method: 'POST', data: {} }).then(function(payload) {
+        FMS.ajax({
+          url: totpEnrollBeginUrl,
+          method: 'POST',
+          data: {}
+        }).then(function(payload) {
           if (payload && payload.qr_data_uri) {
             document.getElementById('totp-qr').src = String(payload.qr_data_uri);
           }
@@ -335,7 +393,13 @@
       var submitTotp = document.getElementById('totp-submit');
       submitTotp.disabled = true;
       var url = totpMode === 'enroll' ? totpEnrollConfirmUrl : totpChallengeUrl;
-      FMS.ajax({ url: url, method: 'POST', data: { code: code } }).then(function(payload) {
+      FMS.ajax({
+        url: url,
+        method: 'POST',
+        data: {
+          code: code
+        }
+      }).then(function(payload) {
         finishLogin(payload);
       }).catch(function(error) {
         var message = (error && error.message) ? String(error.message) : 'Verifikasi gagal. Coba lagi.';
