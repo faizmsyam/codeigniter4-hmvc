@@ -11,7 +11,7 @@
     },
     "require": {
         "php": "^8.4",
-        "codeigniter4/framework": "4.7.5",
+        "codeigniter4/framework": "4.7.6",
         "firebase/php-jwt": "^7.2",
         "hashids/hashids": "^5.0",
         "paragonie/sodium_compat": "^1.21",
