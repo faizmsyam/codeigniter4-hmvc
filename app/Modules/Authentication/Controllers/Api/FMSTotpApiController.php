@@ -99,6 +99,7 @@ final class FMSTotpApiController extends FMSApiController
         $db->table('m_users')->where('id', $pending)->update([
             'totp_secret'     => $totp->encryptSecret($secret),
             'totp_enabled_at' => $now,
+            'totp_required'   => 1,
         ]);
         $db->table('t_user_totp_backup_codes')->where('user_id', $pending)->delete();
         foreach ($backupCodes as $backupCode) {

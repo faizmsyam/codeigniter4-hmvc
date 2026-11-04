@@ -311,9 +311,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function totpBadge(u) {
-    return u.totp_enabled
-      ? `<span class="badge bg-primary-transparent"><i class="ri-shield-keyhole-line me-1"></i>Aktif</span>`
-      : `<span class="badge bg-secondary-transparent">Mati</span>`;
+    if (u.totp_enabled) {
+      return `<span class="badge bg-primary-transparent"><i class="ri-shield-keyhole-line me-1"></i>Aktif</span>`;
+    }
+
+    if (u.totp_required === true) {
+      return `<span class="badge bg-warning-transparent"><i class="ri-shield-keyhole-line me-1"></i>Wajib</span>`;
+    }
+
+    if (u.totp_required === false) {
+      return `<span class="badge bg-secondary-transparent">Mati</span>`;
+    }
+
+    return `<span class="badge bg-info-transparent">Ikut Global</span>`;
   }
 
   function renderSummary(summary) {
@@ -390,8 +400,11 @@ document.addEventListener('DOMContentLoaded', function() {
       actions.push(`<button type="button" class="btn btn-outline-danger btn-glare btn-sm ms-1 js-user-reset-totp" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Nonaktifkan 2FA (reset)"><i class="ri-shield-cross-line"></i></button>`);
     }
 
-    if (CAN_REQUIRE_TOTP && u.status !== `deleted` && !u.totp_enabled) {
-      actions.push(`<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-user-require-totp" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Wajibkan 2FA saat login berikutnya"><i class="ri-shield-keyhole-line"></i></button>`);
+    /* Toggle wajib / tidak wajib 2FA per-user */
+    if (CAN_REQUIRE_TOTP && u.status !== `deleted`) {
+      actions.push(u.totp_required === true
+        ? `<button type="button" class="btn btn-outline-secondary btn-glare btn-sm ms-1 js-user-unrequire-totp" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Tidak Wajibkan 2FA (login tanpa kode Google)"><i class="ri-shield-line"></i></button>`
+        : `<button type="button" class="btn btn-outline-primary btn-glare btn-sm ms-1 js-user-require-totp" data-uuid="${esc(u.uuid)}" data-username="${esc(u.username)}" title="Wajibkan 2FA saat login berikutnya"><i class="ri-shield-keyhole-line"></i></button>`);
     }
 
     const avatarInitial = (u.full_name || u.username || `U`).charAt(0).toUpperCase();
@@ -781,13 +794,33 @@ document.addEventListener('DOMContentLoaded', function() {
       const uname = btnReqTotp.dataset.username;
       FMS.confirm({
         title: `Wajibkan 2FA`,
-        message: `Wajibkan "${uname}" enroll 2FA saat login berikutnya?`,
+        message: `Wajibkan "${uname}" verifikasi Google Authenticator di setiap login?`,
         confirmLabel: `Wajibkan`,
         loadingLabel: `Menyimpan...`,
         variant: `primary`,
         action: function () {
           return FMS.post(`${BASE_URL}/${btnReqTotp.dataset.uuid}/require-totp`, {}).then(function() {
             FMS.toast(`2FA diwajibkan untuk ${uname}.`, true);
+            loadUsers(currentPage);
+          });
+        }
+      });
+      return;
+    }
+
+    /* Tidak wajibkan 2FA per-user (Super only) */
+    const btnUnreqTotp = e.target.closest(`.js-user-unrequire-totp`);
+    if (btnUnreqTotp) {
+      const uname = btnUnreqTotp.dataset.username;
+      FMS.confirm({
+        title: `Tidak Wajibkan 2FA`,
+        message: `"${uname}" tidak akan dimintai kode Google 2FA saat login. Lanjutkan?`,
+        confirmLabel: `Tidak Wajibkan`,
+        loadingLabel: `Menyimpan...`,
+        variant: `primary`,
+        action: function () {
+          return FMS.post(`${BASE_URL}/${btnUnreqTotp.dataset.uuid}/unrequire-totp`, {}).then(function() {
+            FMS.toast(`2FA ${uname} tidak lagi wajib.`, true);
             loadUsers(currentPage);
           });
         }

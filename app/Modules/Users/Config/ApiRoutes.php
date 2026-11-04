@@ -23,6 +23,7 @@ $routes->group('users', ['filter' => $usersApiFilter], static function (RouteCol
     $routes->post('(:segment)/unlock', [FMSUsersApiController::class, 'unlock']);
     $routes->post('(:segment)/reset-password', [FMSUsersApiController::class, 'resetPassword']);
     $routes->post('(:segment)/require-totp', [FMSUsersApiController::class, 'requireTotp']);
+    $routes->post('(:segment)/unrequire-totp', [FMSUsersApiController::class, 'unrequireTotp']);
     $routes->post('(:segment)/reset-totp', [FMSUsersApiController::class, 'resetTotp']);
     $routes->post('(:segment)/verify-email', [FMSUsersApiController::class, 'verifyEmail']);
     $routes->post('(:segment)/unverify-email', [FMSUsersApiController::class, 'unverifyEmail']);

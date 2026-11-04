@@ -451,10 +451,34 @@ class FMSUsersApiController extends FMSApiController
         }
 
         db_connect()->table('m_users')->where('id', $userId)->update([
-            'totp_enabled_at' => date('Y-m-d H:i:s'),
+            'totp_required' => 1,
         ]);
 
         return $this->respondSuccess(200, '2FA diwajibkan untuk user.', ['uuid' => $userUuid], 200);
+    }
+
+    /** Cabut kewajiban 2FA untuk user (Super only via permission). Login berikutnya TANPA input kode Google 2FA. Secret lama tidak dihapus. */
+    public function unrequireTotp(string $userUuid = ''): ResponseInterface
+    {
+        $authenticatedSubject = FMSRequestContext::authenticatedSubject($this->request);
+        if (! is_array($authenticatedSubject)) {
+            return $this->respondError(401, 'Token akses tidak valid.', null, 401);
+        }
+        if (! $this->userAuthorizationService->allows($authenticatedSubject, 'users.require_totp')) {
+            return $this->respondError(403, 'Akses ditolak.', null, 403);
+        }
+
+        try {
+            $userId = $this->userService->userIdentifierFromUuidPublic($userUuid);
+        } catch (InvalidArgumentException) {
+            return $this->respondError(404, 'User tidak ditemukan.', null, 404);
+        }
+
+        db_connect()->table('m_users')->where('id', $userId)->update([
+            'totp_required' => 0,
+        ]);
+
+        return $this->respondSuccess(200, 'Kewajiban 2FA user dicabut.', ['uuid' => $userUuid], 200);
     }
 
     /** Reset 2FA user: hapus secret + backup code (Super only via permission). */
@@ -479,6 +503,7 @@ class FMSUsersApiController extends FMSApiController
         $db->table('m_users')->where('id', $userId)->update([
             'totp_secret'     => null,
             'totp_enabled_at' => null,
+            'totp_required'   => 0,
         ]);
         $db->table('t_user_totp_backup_codes')->where('user_id', $userId)->delete();
         $db->transComplete();
@@ -690,6 +715,9 @@ class FMSUsersApiController extends FMSApiController
                 : (string) ($user['status'] ?? 'active'),
             'is_email_verified' => trim((string) ($user['email_verified_at'] ?? '')) !== '',
             'totp_enabled' => trim((string) ($user['totp_enabled_at'] ?? '')) !== '',
+            'totp_required' => array_key_exists('totp_required', $user) && $user['totp_required'] !== null
+                ? ((int) $user['totp_required'] === 1)
+                : null,
             'locked_until'    => (string) ($user['locked_until'] ?? ''),
             'avatar'          => (string) ($user['avatar'] ?? ''),
             'created_at'      => (string) ($user['created_at'] ?? ''),

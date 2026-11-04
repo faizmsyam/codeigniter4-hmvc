@@ -248,33 +248,53 @@ final class FMSBackendAuthenticationService
         ];
     }
 
-    /** @return array{required: bool, has_secret: bool} */
+    /**
+     * `m_users.totp_required` (tri-state) selalu menang atas setelan global:
+     * - NULL -> ikut `c_auth_settings.totp_enforced`.
+     * - 1    -> user ini wajib verifikasi Google Authenticator.
+     * - 0    -> user ini bebas: login langsung tanpa input kode 2FA.
+     *
+     * @return array{required: bool, has_secret: bool}
+     */
     private function totpStatus(int $userId, array $authenticationPolicy): array
     {
-        if (! empty($authenticationPolicy['totp_enforced'])) {
-            try {
-                $row = db_connect()->table('m_users')->select('totp_secret')->where('id', $userId)->get(1)->getRowArray();
-                $hasSecret = is_array($row) && trim((string) ($row['totp_secret'] ?? '')) !== '';
-            } catch (\Throwable) {
-                $hasSecret = false;
-            }
-
-            return ['required' => true, 'has_secret' => $hasSecret];
-        }
+        $globalEnforced = ! empty($authenticationPolicy['totp_enforced']);
+        $perUserColumnExists = true;
 
         try {
             $row = db_connect()->table('m_users')
-                ->select('totp_secret, totp_enabled_at')
+                ->select('totp_secret, totp_enabled_at, totp_required')
                 ->where('id', $userId)->get(1)->getRowArray();
         } catch (\Throwable) {
+            $perUserColumnExists = false;
+            try {
+                $row = db_connect()->table('m_users')
+                    ->select('totp_secret, totp_enabled_at')
+                    ->where('id', $userId)->get(1)->getRowArray();
+            } catch (\Throwable) {
+                return ['required' => $globalEnforced, 'has_secret' => false];
+            }
+        }
+
+        if (! is_array($row)) {
             return ['required' => false, 'has_secret' => false];
         }
 
-        if (! is_array($row) || empty($row['totp_enabled_at'])) {
-            return ['required' => false, 'has_secret' => false];
+        $hasSecret = trim((string) ($row['totp_secret'] ?? '')) !== '';
+
+        if (! $perUserColumnExists) {
+            return [
+                'required'   => $globalEnforced || trim((string) ($row['totp_enabled_at'] ?? '')) !== '',
+                'has_secret' => $hasSecret,
+            ];
         }
 
-        return ['required' => true, 'has_secret' => trim((string) ($row['totp_secret'] ?? '')) !== ''];
+        $rawOverride = $row['totp_required'] ?? null;
+        $required = $rawOverride === null
+            ? $globalEnforced
+            : ((int) $rawOverride === 1);
+
+        return ['required' => $required, 'has_secret' => $hasSecret];
     }
 
     /**
