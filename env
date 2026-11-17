@@ -52,7 +52,7 @@ CI_ENVIRONMENT = development
 # --------------------------------------------------------------------
 # database.group = default
 # database.stagingHosts = staging.*
-# database.productionHosts = bphtb.*
+# database.productionHosts = production.*
 
 # database.staging.hostname = localhost
 # database.staging.database = ci4_staging
