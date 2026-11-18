@@ -325,5 +325,6 @@ class FMSController extends Controller
     $this->fmsBottomScript($this->assetBasePath.'/js/fms-header-search.js');
     $this->fmsBottomScript($this->assetBasePath.'/js/custom-switcher.min.js');
     $this->fmsBottomScript($this->assetBasePath.'/js/custom.js');
+    $this->fmsBottomScript($this->assetBasePath.'/js/fms-doublemenu.js');
   }
 }
